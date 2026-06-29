@@ -1,0 +1,235 @@
+{
+  "n_runs": 10,
+  "sampling_method": "lhs_scipy_qmc",
+  "scramble": true,
+  "seed": 42,
+  "created_at": "2026-06-29T10:00:08.657740+00:00",
+  "param_names": [
+    "keil8",
+    "km1il6",
+    "km2il10",
+    "km2tgf",
+    "lnril8",
+    "sigmoidb",
+    "init_ec",
+    "init_n",
+    "init_m",
+    "init_f"
+  ],
+  "baselines": {
+    "keil8": 3.9000000000000005e-08,
+    "km1il6": 4.1666666666666676e-08,
+    "km2il10": 7.500000000000003e-09,
+    "km2tgf": 4.666666666666669e-08,
+    "lnril8": 0.25,
+    "sigmoidb": 4.0,
+    "init_ec": 100.0,
+    "init_n": 110.0,
+    "init_m": 100.0,
+    "init_f": 10.0
+  },
+  "bounds": {
+    "keil8": {
+      "low": 2.7300000000000003e-08,
+      "high": 5.070000000000001e-08,
+      "description": "Endothelial cell IL-8 secretion rate"
+    },
+    "km1il6": {
+      "low": 2.916666666666667e-08,
+      "high": 5.416666666666668e-08,
+      "description": "M1 macrophage IL-6 secretion rate"
+    },
+    "km2il10": {
+      "low": 5.2500000000000015e-09,
+      "high": 9.750000000000005e-09,
+      "description": "M2 macrophage IL-10 secretion rate"
+    },
+    "km2tgf": {
+      "low": 3.266666666666668e-08,
+      "high": 6.06666666666667e-08,
+      "description": "M2 macrophage TGF-beta1 secretion rate"
+    },
+    "lnril8": {
+      "low": 0.175,
+      "high": 0.325,
+      "description": "Neutrophil recruitment: IL-8 sigmoid weight"
+    },
+    "sigmoidb": {
+      "low": 2.8,
+      "high": 5.2,
+      "description": "Sigmoid steepness parameter b"
+    },
+    "init_ec": {
+      "low": 70.0,
+      "high": 130.0,
+      "description": "Initial endothelial cell count"
+    },
+    "init_n": {
+      "low": 77.0,
+      "high": 143.0,
+      "description": "Initial neutrophil count"
+    },
+    "init_m": {
+      "low": 70.0,
+      "high": 130.0,
+      "description": "Initial monocyte count"
+    },
+    "init_f": {
+      "low": 7.0,
+      "high": 13.0,
+      "description": "Initial fibroblast count"
+    }
+  },
+  "runs": [
+    {
+      "run_id": "run_0001",
+      "params": {
+        "keil8": 3.016894284637905e-08,
+        "km1il6": 3.306947056728654e-08,
+        "km2il10": 8.013630936039882e-09,
+        "km2tgf": 3.3514036185300464e-08,
+        "lnril8": 0.27858733978168526,
+        "sigmoidb": 3.5258506356071786,
+        "init_ec": 101,
+        "init_n": 85,
+        "init_m": 123,
+        "init_f": 9
+      }
+    },
+    {
+      "run_id": "run_0002",
+      "params": {
+        "keil8": 3.8132332623295766e-08,
+        "km1il6": 4.9349754194545174e-08,
+        "km2il10": 6.310260695963703e-09,
+        "km2tgf": 5.276293414950836e-08,
+        "lnril8": 0.21334878701759002,
+        "sigmoidb": 4.905462706771654,
+        "init_ec": 85,
+        "init_n": 103,
+        "init_m": 95,
+        "init_f": 11
+      }
+    },
+    {
+      "run_id": "run_0003",
+      "params": {
+        "keil8": 3.254607468820023e-08,
+        "km1il6": 4.5780351746342005e-08,
+        "km2il10": 8.863185889022297e-09,
+        "km2tgf": 5.8165927526964534e-08,
+        "lnril8": 0.28332424754389357,
+        "sigmoidb": 3.9532867101155276,
+        "init_ec": 79,
+        "init_n": 136,
+        "init_m": 111,
+        "init_f": 10
+      }
+    },
+    {
+      "run_id": "run_0004",
+      "params": {
+        "keil8": 4.427725655517572e-08,
+        "km1il6": 3.424789233558115e-08,
+        "km2il10": 7.803378588837835e-09,
+        "km2tgf": 3.722937948976905e-08,
+        "lnril8": 0.2579566628308629,
+        "sigmoidb": 4.674526873819771,
+        "init_ec": 129,
+        "init_n": 120,
+        "init_m": 93,
+        "init_f": 13
+      }
+    },
+    {
+      "run_id": "run_0005",
+      "params": {
+        "keil8": 3.563706450983875e-08,
+        "km1il6": 4.7084971176522085e-08,
+        "km2il10": 8.534880704098991e-09,
+        "km2tgf": 5.139204007079697e-08,
+        "lnril8": 0.22251610297907198,
+        "sigmoidb": 2.8468565542007673,
+        "init_ec": 110,
+        "init_n": 141,
+        "init_m": 78,
+        "init_f": 8
+      }
+    },
+    {
+      "run_id": "run_0006",
+      "params": {
+        "keil8": 4.3212214806208254e-08,
+        "km1il6": 5.4148260992289165e-08,
+        "km2il10": 7.14588403012404e-09,
+        "km2tgf": 5.6005084268209004e-08,
+        "lnril8": 0.239422519320605,
+        "sigmoidb": 3.0926250325547278,
+        "init_ec": 91,
+        "init_n": 113,
+        "init_m": 75,
+        "init_f": 10
+      }
+    },
+    {
+      "run_id": "run_0007",
+      "params": {
+        "keil8": 4.67959370694103e-08,
+        "km1il6": 3.0488926151308836e-08,
+        "km2il10": 5.445643752083466e-09,
+        "km2tgf": 4.172466986590181e-08,
+        "lnril8": 0.1954792251999911,
+        "sigmoidb": 4.347140943842081,
+        "init_ec": 115,
+        "init_n": 95,
+        "init_m": 88,
+        "init_f": 12
+      }
+    },
+    {
+      "run_id": "run_0008",
+      "params": {
+        "keil8": 4.083787186560231e-08,
+        "km1il6": 3.8145345057355085e-08,
+        "km2il10": 5.765968617029327e-09,
+        "km2tgf": 4.601163610624373e-08,
+        "lnril8": 0.32412545887466404,
+        "sigmoidb": 4.1724678659147205,
+        "init_ec": 98,
+        "init_n": 106,
+        "init_m": 103,
+        "init_f": 8
+      }
+    },
+    {
+      "run_id": "run_0009",
+      "params": {
+        "keil8": 2.8085506315633916e-08,
+        "km1il6": 4.31506995130665e-08,
+        "km2il10": 9.383690826900288e-09,
+        "km2tgf": 4.059914249092511e-08,
+        "lnril8": 0.30965931890299214,
+        "sigmoidb": 5.1783885134138465,
+        "init_ec": 120,
+        "init_n": 81,
+        "init_m": 129,
+        "init_f": 11
+      }
+    },
+    {
+      "run_id": "run_0010",
+      "params": {
+        "keil8": 5.03435896796512e-08,
+        "km1il6": 3.9925865728972333e-08,
+        "km2il10": 6.849229675991689e-09,
+        "km2tgf": 4.839980723359654e-08,
+        "lnril8": 0.18547731866278183,
+        "sigmoidb": 3.3687321776514665,
+        "init_ec": 74,
+        "init_n": 129,
+        "init_m": 117,
+        "init_f": 7
+      }
+    }
+  ]
+}
