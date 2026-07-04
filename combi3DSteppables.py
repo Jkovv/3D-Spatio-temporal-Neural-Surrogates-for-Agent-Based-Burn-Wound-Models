@@ -25,22 +25,32 @@ import csv
 import numpy as np
 from numpy import *
 from builtins import range
+import os as _os_sweep
+
+# SWEEP MODE (env COMBI3D_SWEEP=1): headless HPC calibration runs.
+#   * skip PNG plot rendering + CC3D plot windows  (no GUI, faster)
+#   * skip per-cell per-MCS concentration CSV        (inode/time cost, unused)
+#   * write cytokine NPZ as float32                  (half the data volume)
+# STILL writes: CytoStep/CellStep NPZ (surrogate input) AND
+# mean_concentration.txt + cellcount.txt (SMoRe ParS scalar observables).
+SWEEP_MODE = _os_sweep.environ.get("COMBI3D_SWEEP", "0") == "1"
+_NPZ_DTYPE = np.float32 if SWEEP_MODE else np.float64
 
 global mesh
 global cytokines
 global fullFileName
 
-# 3D FiPy mesh 
+# 3D FiPy mesh (shared by steppable and solver)
 mesh = Grid3D(dx=dx, dy=dy, dz=dz, nx=nx, ny=ny, nz=nz)
 
-# cell-presence indicator arrays
+# Cell-presence indicator arrays
 cellpresente    = CellVariable(name="cellpresente",    mesh=mesh, value=0.)
 cellpresentndn  = CellVariable(name="cellpresentndn",  mesh=mesh, value=0.)
 cellpresentna   = CellVariable(name="cellpresentna",   mesh=mesh, value=0.)
 cellpresentm1   = CellVariable(name="cellpresentm1",   mesh=mesh, value=0.)
 cellpresentm2   = CellVariable(name="cellpresentm2",   mesh=mesh, value=0.)
 
-# cytokine fields (6): il8, il1, il6, il10, tnf, tgf
+# Cytokine fields (6): il8, il1, il6, il10, tnf, tgf
 cytokines = [CellVariable(name="cytokine", mesh=mesh, value=0.0)
              for _ in range(total_cytokines)]
 
@@ -48,20 +58,22 @@ setlambda = 2000
 setSaturationCoef = 10 ** -11
 
 _TYPE_NAMES = {
-    0:'Medium',
-    1:'endothelial',
-    2:'neutrophil',
-    3:'monocyte',
-    4:'fibroblast',
-    5:'neutrophila',
-    6:'neutrophilndn',
-    7:'monocyter',
-    8:'macrophage1',
-    9:'macrophage2',
-    10:'myofibroblast',
+    0:  'Medium',
+    1:  'endothelial',
+    2:  'neutrophil',
+    3:  'monocyte',
+    4:  'fibroblast',
+    5:  'neutrophila',
+    6:  'neutrophilndn',
+    7:  'monocyter',
+    8:  'macrophage1',
+    9:  'macrophage2',
+    10: 'myofibroblast',
 }
 
+
 def safe_randopos(cell_field, nx, ny, nz):
+    """Uniform random position over full lattice; returns first unoccupied site."""
     while True:
         x = random.randint(0, nx - 1)
         y = random.randint(0, ny - 1)
@@ -69,29 +81,36 @@ def safe_randopos(cell_field, nx, ny, nz):
         if cell_field[x, y, z] is None:
             return x, y, z
 
+
 def sigmoid(x, a, b):
     z = np.exp(-a * (x - b))
     return 1.0 / (1.0 + z)
 
+
 def modmm(x, km, vmax):
     return abs((vmax * x) / (km + x))
 
+
 def age_hours(mcs, cell):
+    """Age of cell in biological hours, regardless of step() call frequency."""
     return (mcs - cell.dict["born_mcs"]) / relaxationmcs
 
+
 class endothelialSteppable(SteppableBasePy):
+
     def __init__(self, frequency=int(relaxationmcs)):
         SteppableBasePy.__init__(self, frequency)
 
     def start(self):
         global fullFileName
 
-        self.scalarFieldil8 = self.create_scalar_field_py("il8")
-        self.scalarFieldil1 = self.create_scalar_field_py("il1")
-        self.scalarFieldil6 = self.create_scalar_field_py("il6")
+        # Scalar fields for visualisation
+        self.scalarFieldil8  = self.create_scalar_field_py("il8")
+        self.scalarFieldil1  = self.create_scalar_field_py("il1")
+        self.scalarFieldil6  = self.create_scalar_field_py("il6")
         self.scalarFieldil10 = self.create_scalar_field_py("il10")
-        self.scalarFieldtnf = self.create_scalar_field_py("tnf")
-        self.scalarFieldtgf = self.create_scalar_field_py("tgf")
+        self.scalarFieldtnf  = self.create_scalar_field_py("tnf")
+        self.scalarFieldtgf  = self.create_scalar_field_py("tgf")
 
         _out_root = self.output_dir or os.path.dirname(os.path.abspath(__file__))
         datafiles_dir = os.path.join(_out_root, "datafiles")
@@ -99,30 +118,33 @@ class endothelialSteppable(SteppableBasePy):
         fullFileName = os.path.join(datafiles_dir, "creatdoc.txt")
         fileHandle = open(fullFileName, "w")
 
-        self.plot_win = self.add_new_plot_window(
-            title='Cell counts',
-            x_axis_title='MonteCarlo Step (MCS)',
-            y_axis_title='Cell types',
-            x_scale_type='linear', y_scale_type='linear', grid=False,
-            config_options={'legend': True})
-        labels = ['Endothelial', 'Neutrophils', 'Monocytes', 'Fibroblast',
-                  'Neutrophil A', 'ND Neutrophil', 'Monocyte R',
-                  'Macrophage I', 'Macrophage II', 'Myofibroblast']
-        colors = ["blue", "brown", "cyan", "violet", "red",
-                  "pink", "yellow", "orange", "darkblue", "green"]
-        [self.plot_win.add_plot(labels[i], style='Lines', color=colors[i])
-         for i in range(len(colors))]
+        self.plot_win = None
+        self.cytokine_plot_win = None
+        if not SWEEP_MODE:
+            self.plot_win = self.add_new_plot_window(
+                title='Cell counts',
+                x_axis_title='MonteCarlo Step (MCS)',
+                y_axis_title='Cell types',
+                x_scale_type='linear', y_scale_type='linear', grid=False,
+                config_options={'legend': True})
+            labels = ['Endothelial', 'Neutrophils', 'Monocytes', 'Fibroblast',
+                      'Neutrophil A', 'ND Neutrophil', 'Monocyte R',
+                      'Macrophage I', 'Macrophage II', 'Myofibroblast']
+            colors = ["blue", "brown", "cyan", "violet", "red",
+                      "pink", "yellow", "orange", "darkblue", "green"]
+            [self.plot_win.add_plot(labels[i], style='Lines', color=colors[i])
+             for i in range(len(colors))]
 
-        self.cytokine_plot_win = self.add_new_plot_window(
-            title='Mean cytokine concentrations',
-            x_axis_title='MonteCarlo Step (MCS)',
-            y_axis_title='Mean concentration',
-            x_scale_type='linear', y_scale_type='linear', grid=False,
-            config_options={'legend': True})
-        cyto_labels = ['IL-8', 'IL-1', 'IL-6', 'IL-10', 'TNF', 'TGF']
-        cyto_colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown']
-        [self.cytokine_plot_win.add_plot(cyto_labels[i], style='Lines', color=cyto_colors[i])
-         for i in range(len(cyto_labels))]
+            self.cytokine_plot_win = self.add_new_plot_window(
+                title='Mean cytokine concentrations',
+                x_axis_title='MonteCarlo Step (MCS)',
+                y_axis_title='Mean concentration',
+                x_scale_type='linear', y_scale_type='linear', grid=False,
+                config_options={'legend': True})
+            cyto_labels = ['IL-8', 'IL-1', 'IL-6', 'IL-10', 'TNF', 'TGF']
+            cyto_colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown']
+            [self.cytokine_plot_win.add_plot(cyto_labels[i], style='Lines', color=cyto_colors[i])
+             for i in range(len(cyto_labels))]
 
         # Place initial cells
         for i in range(init_ec):
@@ -145,19 +167,26 @@ class endothelialSteppable(SteppableBasePy):
             x, y, z = safe_randopos(self.cell_field, nx, ny, nz)
             self.cell_field[x:x + 1, y:y + 1, z:z + 1] = self.new_cell(self.MONOCYTE)
 
+        # Initialise per-cell attributes.
+        # born_mcs is set to a negative offset so cells start with a random
+        # pre-existing age (0 to span hours), making the population age-distributed
+        # from the first step.  Age in hours is always: (mcs - born_mcs) / relaxationmcs.
+        # targetVolume=3 / lambdaVolume=40 match the APRcombi3D 3D reference: with
+        # Temperature=100, a 1-voxel cell (targetVolume=1, lambdaVolume=10) has a 90%
+        # acceptance rate per CPM shrink attempt and disappears within a few MCS.
         # targetVolume=3 requires three sequential shrinks (ΔE=40, 120, 200) making
         # spontaneous CPM death negligible over 10,000-MCS relaxation intervals.
         for cell in self.cell_list:
             cell.targetVolume = 3
             cell.lambdaVolume = 40.0
 
-            if cell.type == 1: # ENDOTHELIAL
+            if cell.type == 1:  # ENDOTHELIAL
                 cell.dict["born_mcs"] = 0
                 cell.dict["span"] = lifespane
                 cell.dict["divide"] = divpre
                 cell.dict["dividepr"] = 1
 
-            if cell.type == 2: # NEUTROPHIL
+            if cell.type == 2:  # NEUTROPHIL
                 cd = self.chemotaxisPlugin.addChemotaxisData(cell, "cytokine")
                 cd.setLambda(setlambda)
                 cd.setChemotactTowards("MEDIUM")
@@ -168,7 +197,7 @@ class endothelialSteppable(SteppableBasePy):
                 # first or second step() call (mcs=0 and mcs=relaxationmcs).
                 cell.dict["born_mcs"] = -random.randint(0, lifespannr - 1) * relaxationmcs
 
-            if cell.type == 3: # MONOCYTE
+            if cell.type == 3:  # MONOCYTE
                 cd = self.chemotaxisPlugin.addChemotaxisData(cell, "cytokine")
                 cd.setLambda(setlambda)
                 cd.setChemotactTowards("MEDIUM")
@@ -177,7 +206,7 @@ class endothelialSteppable(SteppableBasePy):
                 cell.dict["dividepr"] = divprm
                 cell.dict["born_mcs"] = -random.randint(0, lifespanm - 1) * relaxationmcs
 
-            if cell.type == 4: # FIBROBLAST
+            if cell.type == 4:  # FIBROBLAST
                 cd = self.chemotaxisPlugin.addChemotaxisData(cell, "cytokine")
                 cd.setLambda(setlambda)
                 cd.setChemotactTowards("MEDIUM")
@@ -187,13 +216,13 @@ class endothelialSteppable(SteppableBasePy):
                 cell.dict["dividepr"] = divprf
                 cell.dict["born_mcs"] = -random.randint(0, lifespanf - 1) * relaxationmcs
 
-            if cell.type == 10: # MYOFIBROBLAST
+            if cell.type == 10:  # MYOFIBROBLAST
                 cell.dict["span"] = lifespanf
                 cell.dict["divide"] = random.randint(0, divprf)
                 cell.dict["dividepr"] = divprf
                 cell.dict["born_mcs"] = -random.randint(0, lifespanf - 1) * relaxationmcs
 
-        # PIFF dump: initial cell layout (MCS 0 only) 
+        # ── PIFF dump: initial cell layout (MCS 0 only) ───────────────────────
         piff_path = os.path.join(
             os.path.dirname(os.path.dirname(fullFileName)), 'initial_cells.piff')
         with open(piff_path, 'w') as piff_f:
@@ -212,7 +241,7 @@ class endothelialSteppable(SteppableBasePy):
 
         ccount = np.zeros(total_celltypes + 1)
 
-        # Replenishment - every 10 biological hours (matches 2D reference interval).
+        # Replenishment — every 10 biological hours (matches 2D reference interval).
         # Re-initialises ALL existing cells as well as new arrivals, matching the
         # 2D reference behaviour where the replenishment loop re-randomises every
         # cell's age regardless of whether it is new or pre-existing.
@@ -233,7 +262,7 @@ class endothelialSteppable(SteppableBasePy):
                 x, y, z = safe_randopos(self.cell_field, nx, ny, nz)
                 self.cell_field[x:x + 1, y:y + 1, z:z + 1] = self.new_cell(self.MONOCYTE)
 
-            # Re-initialise ALL cells (new and existing) - matches 2D reference which
+            # Re-initialise ALL cells (new and existing) — matches 2D reference which
             # re-randomises every cell's age in this block unconditionally.
             for cell in self.cell_list:
                 cell.targetVolume = 3
@@ -319,17 +348,22 @@ class endothelialSteppable(SteppableBasePy):
         self.scalarFieldtnf[:]  = np.reshape(cytokines[4], (nx, ny, nz), 'F')
         self.scalarFieldtgf[:]  = np.reshape(cytokines[5], (nx, ny, nz), 'F')
 
+        # Write cytokine concentrations directly to NPZ — bypasses the CC3D
+        # scalar-field sync bug where create_scalar_field_py writes are not
+        # reflected in the VTK output.  plot_cytokines.py reads these files.
+        # FiPy x-fastest flat order → reshape to (nz, ny, nx) in C order so
+        # arr[z, y, x] matches the VTK reader convention in plot_cytokines.py.
         fileDir = os.path.dirname(os.path.abspath(fullFileName))
         _lattice_dir = os.path.join(os.path.dirname(fileDir), "LatticeData")
         os.makedirs(_lattice_dir, exist_ok=True)
         np.savez_compressed(
             os.path.join(_lattice_dir, f"CytoStep_{mcs:07d}.npz"),
-            il8  = np.array(cytokines[0]).reshape((nz, ny, nx)),
-            il1  = np.array(cytokines[1]).reshape((nz, ny, nx)),
-            il6  = np.array(cytokines[2]).reshape((nz, ny, nx)),
-            il10 = np.array(cytokines[3]).reshape((nz, ny, nx)),
-            tnf  = np.array(cytokines[4]).reshape((nz, ny, nx)),
-            tgf  = np.array(cytokines[5]).reshape((nz, ny, nx)),
+            il8  = np.array(cytokines[0]).reshape((nz, ny, nx)).astype(_NPZ_DTYPE),
+            il1  = np.array(cytokines[1]).reshape((nz, ny, nx)).astype(_NPZ_DTYPE),
+            il6  = np.array(cytokines[2]).reshape((nz, ny, nx)).astype(_NPZ_DTYPE),
+            il10 = np.array(cytokines[3]).reshape((nz, ny, nx)).astype(_NPZ_DTYPE),
+            tnf  = np.array(cytokines[4]).reshape((nz, ny, nx)).astype(_NPZ_DTYPE),
+            tgf  = np.array(cytokines[5]).reshape((nz, ny, nx)).astype(_NPZ_DTYPE),
         )
 
         # Write cell-type lattice snapshot: uint8 array [z, y, x] where each
@@ -381,19 +415,22 @@ class endothelialSteppable(SteppableBasePy):
             cctnf  = self.scalarFieldtnf[xCOM,  yCOM, zCOM]
             cctgf  = self.scalarFieldtgf[xCOM,  yCOM, zCOM]
 
-            # Per-MCS concentration file
-            fileDir = os.path.dirname(os.path.abspath(fullFileName))
-            cytoname = fileDir + "/datafiles" + str(mcs) + "concentration.txt"
-            if not os.path.exists(cytoname):
-                with open(cytoname, 'w') as cytofile:
-                    writer = csv.writer(cytofile)
-                    writer.writerow(["mcsteps", "xCOM", "yCOM", "zCOM",
-                                     "il8", "il1", "il6", "il10", "tnf", "tgf"])
-            with open(cytoname, 'a') as cytofile:
-                cytowriter = csv.writer(cytofile)
-                cytowriter.writerow([str(mcs), str(xCOM), str(yCOM), str(zCOM),
-                                     str(ccil8), str(ccil1), str(ccil6),
-                                     str(ccil10), str(cctnf), str(cctgf)])
+            # Per-MCS per-cell concentration file.
+            # Skipped in sweep mode (heavy inode/time cost, unused by SMoRe ParS,
+            # which reads the aggregate mean_concentration.txt instead).
+            if not SWEEP_MODE:
+                fileDir = os.path.dirname(os.path.abspath(fullFileName))
+                cytoname = fileDir + "/datafiles" + str(mcs) + "concentration.txt"
+                if not os.path.exists(cytoname):
+                    with open(cytoname, 'w') as cytofile:
+                        writer = csv.writer(cytofile)
+                        writer.writerow(["mcsteps", "xCOM", "yCOM", "zCOM",
+                                         "il8", "il1", "il6", "il10", "tnf", "tgf"])
+                with open(cytoname, 'a') as cytofile:
+                    cytowriter = csv.writer(cytofile)
+                    cytowriter.writerow([str(mcs), str(xCOM), str(yCOM), str(zCOM),
+                                         str(ccil8), str(ccil1), str(ccil6),
+                                         str(ccil10), str(cctnf), str(cctgf)])
 
             il8_list.append(ccil8)
             il1_list.append(ccil1)
@@ -402,7 +439,7 @@ class endothelialSteppable(SteppableBasePy):
             tnf_list.append(cctnf)
             tgf_list.append(cctgf)
 
-            # Age in biological hours - independent of step() call frequency
+            # Age in biological hours — independent of step() call frequency
             cell_age = age_hours(mcs, cell)
 
             if cell_age > cell.dict["span"]:
@@ -411,7 +448,7 @@ class endothelialSteppable(SteppableBasePy):
                 if cell_age > timeforgrowth * cell.dict["span"]:
                     cell.targetVolume = 6  # double resting size (3 → 6)
 
-                if cell.type == 2:  # neutrophil -> neutrophila
+                if cell.type == 2:  # neutrophil --> neutrophila
                     proba = (sigmoid(ccil8 * 10 ** 9, sigmoida, sigmoidb) * lnril8
                              + sigmoid(ccil6 * 10 ** 11, sigmoida, sigmoidb) * lnril6
                              + sigmoid(ccil1 * 10 ** 9, sigmoida, sigmoidb) * lnril1
@@ -420,17 +457,17 @@ class endothelialSteppable(SteppableBasePy):
                     if proba > random.random():
                         cell.type = 5
 
-                if cell.type == 7:  # monocyter -> macrophage1
+                if cell.type == 7:  # monocyter --> macrophage1
                     proba = (0.1
                              + 0.9 * sigmoid(ccil6 * 10 ** 11, sigmoida, sigmoidb) * lmril6
                              + sigmoid(cctnf * 10 ** 9, sigmoida, sigmoidb) * lmrtnf
                              - sigmoid(ccil10 * 10 ** 12, sigmoida, sigmoidb) * tmril10)
                     if proba > random.random():
                         cell.type = 8
-                        cell.dict["born_mcs"] = mcs # reset age at transition
+                        cell.dict["born_mcs"] = mcs   # reset age at transition
                         cell.dict["span"] = lifespanmr
 
-                if cell.type == 8:  # macrophage1 -> macrophage2
+                if cell.type == 8:  # macrophage1 --> macrophage2
                     proba = (0.1
                              + 0.9 * sigmoid(ccil10 * 10 ** 12, sigmoida, sigmoidb) * lm1il10)
                     if proba > random.random():
@@ -438,38 +475,39 @@ class endothelialSteppable(SteppableBasePy):
                         cell.dict["born_mcs"] = mcs   # reset age at transition
                         cell.dict["span"] = modmm(mcs, km, vmax)
 
-                if cell.type == 4:  # fibroblast -> myofibroblast
+                if cell.type == 4:  # fibroblast --> myofibroblast
                     proba = 0.1 * sigmoid(cctgf * 10 ** 10, sigmoida, sigmoidb) * lftgf
                     if proba > random.random():
                         cell.type = 10
 
-                if cell.type == 5:  # neutrophila -> neutrophilndn
+                if cell.type == 5:  # neutrophila --> neutrophilndn
                     if random.randint(0, 1000) == 50:
                         cell.type = 6
 
-                if cell.type == 3:  # monocyte -> monocyter
+                if cell.type == 3:  # monocyte --> monocyter
                     proba = (0.1
                              + 0.9 * sigmoid(ccil6 * 10 ** 11, sigmoida, sigmoidb) * tranril6)
                     if proba > random.random():
                         cell.type = 7
-                        cell.dict["born_mcs"] = mcs # reset age at transition
+                        cell.dict["born_mcs"] = mcs   # reset age at transition
                         cell.dict["span"] = lifespanmr
 
                 ccount[cell.type] += 1
 
-        # Plot
-        labels = ['Endothelial', 'Neutrophils', 'Monocytes', 'Fibroblast',
-                  'Neutrophil A', 'ND Neutrophil', 'Monocyte R',
-                  'Macrophage I', 'Macrophage II', 'Myofibroblast']
-        [self.plot_win.add_data_point(labels[i], mcs, ccount[i + 1])
-         for i in range(len(labels))]
-
+        # Cell-count plot data + PNG — interactive mode only.
         fileDir = os.path.dirname(os.path.abspath(fullFileName))
-        namer = fileDir + "/datafiles" + str(mcs) + ".png"
-        if not os.path.exists(os.path.dirname(namer)):
-            os.makedirs(os.path.dirname(namer))
-        self.plot_win.save_plot_as_png(namer, 1200, 1200)
+        if not SWEEP_MODE:
+            labels = ['Endothelial', 'Neutrophils', 'Monocytes', 'Fibroblast',
+                      'Neutrophil A', 'ND Neutrophil', 'Monocyte R',
+                      'Macrophage I', 'Macrophage II', 'Myofibroblast']
+            [self.plot_win.add_data_point(labels[i], mcs, ccount[i + 1])
+             for i in range(len(labels))]
+            namer = fileDir + "/datafiles" + str(mcs) + ".png"
+            if not os.path.exists(os.path.dirname(namer)):
+                os.makedirs(os.path.dirname(namer))
+            self.plot_win.save_plot_as_png(namer, 1200, 1200)
 
+        # cellcount.txt is ALWAYS written (SMoRe ParS reads it as an observable).
         countname = fileDir + "/cellcount.txt"
         if not os.path.exists(countname):
             with open(countname, 'w') as f:
@@ -510,14 +548,15 @@ class endothelialSteppable(SteppableBasePy):
                                  str(il8_std), str(il1_std), str(il6_std),
                                  str(il10_std), str(tnf_std), str(tgf_std)])
 
-        # Cytokine plot
-        cyto_labels = ['IL-8', 'IL-1', 'IL-6', 'IL-10', 'TNF', 'TGF']
-        cyto_means  = [il8_mean, il1_mean, il6_mean, il10_mean, tnf_mean, tgf_mean]
-        [self.cytokine_plot_win.add_data_point(cyto_labels[i], mcs, cyto_means[i])
-         for i in range(len(cyto_labels))]
-
-        cyto_png = fileDir + "/cytokines" + str(mcs) + ".png"
-        self.cytokine_plot_win.save_plot_as_png(cyto_png, 1200, 1200)
+        # Cytokine mean plot — interactive mode only.
+        # (mean_concentration.txt above is always written; SMoRe ParS reads it.)
+        if not SWEEP_MODE:
+            cyto_labels = ['IL-8', 'IL-1', 'IL-6', 'IL-10', 'TNF', 'TGF']
+            cyto_means  = [il8_mean, il1_mean, il6_mean, il10_mean, tnf_mean, tgf_mean]
+            [self.cytokine_plot_win.add_data_point(cyto_labels[i], mcs, cyto_means[i])
+             for i in range(len(cyto_labels))]
+            cyto_png = fileDir + "/cytokines" + str(mcs) + ".png"
+            self.cytokine_plot_win.save_plot_as_png(cyto_png, 1200, 1200)
 
     def finish(self):
         pass

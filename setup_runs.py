@@ -1,4 +1,37 @@
 #!/usr/bin/env python3
+# combi3D/Simulation/setup_runs.py
+#
+# Clean, deterministic LHS manifest generator for the SMoRe ParS sweep.
+#
+# WHY THIS EXISTS (and why it replaces the old generator):
+#   The previous sweep desynced: manifest.json and the per-run override files
+#   were produced by two different sampling passes, some overrides fell outside
+#   the stated bounds, only runs 1-4 got override files (5-10 ran on baseline),
+#   and the initial cell counts never varied. Root cause: the manifest and the
+#   things that actually drove the sims were SEPARATE artefacts that had to be
+#   kept in sync by hand.
+#
+#   This generator makes the manifest the SINGLE SOURCE OF TRUTH. It samples
+#   every parameter ONCE, in one pass, with one seeded LHS design, and writes
+#   exactly one manifest.json. run_sweep.py then explodes that manifest into the
+#   per-run JSONs the simulation reads. There is no second artefact to drift.
+#
+# METHOD (matches the SMoRe ParS literature):
+#   Latin Hypercube Sampling via scipy.stats.qmc.LatinHypercube, which is
+#   deterministic under a fixed seed and independent of SALib (so the later
+#   Sobol/SALib step does not share RNG state with sweep generation). Each
+#   parameter is sampled in [low, high] from the bounds table below; bounds are
+#   +/-30% around the baseline unless noted (cell counts are integer-valued).
+#
+# INTENDED PIPELINE (the scientifically correct order):
+#   1. setup_runs.py  -> manifest.json           (sweep ALL parameters)
+#   2. run_sweep.py   -> per-run sims            (one theta per trajectory)
+#   3. Sobol (emulator-based) on the runs        -> rank parameter sensitivity
+#   4. SMoRe ParS on the TOP-K sensitive params  -> recover theta_ABM
+#   Calibrating only the top-k (not all 10) is deliberate: parameters that do
+#   not move the outputs are not identifiable and would depress recovery scores
+#   for reasons that have nothing to do with the method. Sobol picks which
+#   parameters are worth calibrating.
 
 import argparse
 import json
@@ -7,6 +40,11 @@ from datetime import datetime, timezone
 import numpy as np
 from scipy.stats import qmc
 
+
+# ── Parameter definitions: baseline + bounds. ───────────────────────────────
+# "kind" mirrors param_loader: "int_count" parameters are rounded to ints.
+# Bounds here are the ones from the supervisor's manifest (±30% on rates,
+# ±30% on cell counts, sigmoidb ±30%, lnril8 ±30%). Edit in ONE place.
 PARAM_SPEC = {
     "keil8":    {"baseline": 3.9000000000000005e-08, "low": 2.7300000000000003e-08, "high": 5.070000000000001e-08,  "kind": "float", "description": "Endothelial cell IL-8 secretion rate"},
     "km1il6":   {"baseline": 4.1666666666666676e-08, "low": 2.916666666666667e-08,  "high": 5.416666666666668e-08,  "kind": "float", "description": "M1 macrophage IL-6 secretion rate"},
@@ -20,7 +58,10 @@ PARAM_SPEC = {
     "init_f":   {"baseline": 10.0,                   "low": 7.0,                    "high": 13.0,                   "kind": "int_count", "description": "Initial fibroblast count"},
 }
 
+# Canonical ordering (LHS columns map to this order, so a fixed seed gives a
+# fixed design).
 PARAM_ORDER = list(PARAM_SPEC.keys())
+
 
 def generate(n_runs, seed, scramble=True):
     d = len(PARAM_ORDER)
@@ -61,6 +102,9 @@ def build_manifest(n_runs, seed, scramble):
 
 
 def validate(manifest):
+    """Self-check: every sampled value must lie within its stated bounds, and
+    int_count params must be integers. This is the guard the old pipeline
+    lacked (it let sigmoidb=12.5 through against bounds 2.8-5.2)."""
     problems = []
     for run in manifest["runs"]:
         for name, val in run["params"].items():
@@ -99,6 +143,7 @@ def main():
     print(f"[setup_runs] validation: all values within bounds OK")
     print(f"[setup_runs] next: python run_sweep.py --manifest {args.out} "
           f"--mode local --cc3d-run <path>")
+
 
 if __name__ == "__main__":
     main()

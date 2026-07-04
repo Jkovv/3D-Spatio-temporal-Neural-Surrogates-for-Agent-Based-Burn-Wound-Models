@@ -1,3 +1,26 @@
+#!/usr/bin/env python3
+# combi3D/Simulation/run_sweep.py
+#
+# Drives a SMoRe ParS / sweep over the ABM from a manifest.json, using the
+# per-run-directory layout (matching the original sweep, but with a validated
+# JSON parameter file instead of a generated .py override):
+#
+#   sweep/runs/<run_id>/Simulation/   <- full copy of the Simulation code
+#       + params.json                 <- THIS run's theta vector (validated)
+#   sweep/outputs/<run_id>/           <- CC3D output (OUTSIDE the run dir;
+#                                        CC3D rejects output under the .cc3d
+#                                        parent directory)
+#
+# Each run reads its own params.json via param_loader (no reliance on the
+# environment being passed through CC3D's launcher). The CC3D launch uses the
+# real command:
+#     <cc3d_python> -m cc3d.run_script --input=<run>/combi3D.cc3d \
+#                   --output-dir=<out>
+#
+# Two modes:
+#   --mode local : run sequentially in this process (PoC).
+#   --mode slurm : emit a SLURM array script; submit by hand.
+
 import argparse
 import json
 import shutil
@@ -19,12 +42,14 @@ SIM_FILES = [
     "param_loader.py",
 ]
 
+
 def load_manifest(path):
     with open(path) as f:
         man = json.load(f)
     if "runs" not in man or not isinstance(man["runs"], list):
         sys.exit(f"[run_sweep] manifest {path} has no 'runs' list")
     return man
+
 
 def stage_run(run, sim_src, runs_dir, cc3d_src):
     rid = run["run_id"]
@@ -52,6 +77,7 @@ def cc3d_command(cc3d_python, run_dir, out_dir):
             f"--input={run_dir}/combi3D.cc3d",
             f"--output-dir={out_dir}"]
 
+
 def run_local(staged, out_root, cc3d_python):
     out_root.mkdir(parents=True, exist_ok=True)
     for rid, run_dir, sim_dir in staged:
@@ -69,6 +95,7 @@ def run_local(staged, out_root, cc3d_python):
             sys.exit(e.returncode)
         shutil.copy2(sim_dir / "params.json", out_dir / "params.json")
         print(f"[run_sweep] {rid} done -> {out_dir}")
+
 
 def emit_slurm(staged, out_root, cc3d_python, account, work, cpus, hours):
     out_root.mkdir(parents=True, exist_ok=True)
@@ -88,6 +115,12 @@ def emit_slurm(staged, out_root, cc3d_python, account, work, cpus, hours):
 {account_line}#SBATCH --output={work}/slurm_%A_%a.out
 
 set -euo pipefail
+
+# Sweep mode: float32 output + no PNG/plots (headless HPC). Set here so it
+# always applies inside the job, regardless of the submitting shell's env.
+# Override with --export on sbatch if you ever want the interactive behaviour.
+export COMBI3D_SWEEP=1
+
 LINE=$(sed -n "${{SLURM_ARRAY_TASK_ID}}p" "{idx_file}")
 RID=$(echo "$LINE"  | cut -f1)
 RUNDIR=$(echo "$LINE" | cut -f2)
@@ -95,7 +128,7 @@ SIMDIR=$(echo "$LINE" | cut -f3)
 OUTDIR="{out_root}/$RID"
 mkdir -p "$OUTDIR"
 
-echo "[$RID] launching"
+echo "[$RID] launching (COMBI3D_SWEEP=$COMBI3D_SWEEP)"
 "{cc3d_python}" -m cc3d.run_script --input="$RUNDIR/combi3D.cc3d" --output-dir="$OUTDIR"
 
 cp "$SIMDIR/params.json" "$OUTDIR/params.json"
@@ -136,6 +169,7 @@ def main():
     else:
         emit_slurm(staged, args.out, args.cc3d_python, args.account,
                    args.work, args.cpus, args.hours)
+
 
 if __name__ == "__main__":
     main()

@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
-
+# combi3D/verify.py
+#
+# Self-check for the whole pipeline WITHOUT needing CompuCell3D.
+# Run this first to confirm everything is wired correctly:
+#
+#     python verify.py
+#
 # It checks, in order:
 #   1. setup_runs.py generates a valid manifest (deterministic, in-bounds).
 #   2. param_loader applies a per-run vector correctly (rates + int cell counts).
 #   3. param_loader fails LOUD on a bad parameter name / missing file.
 #   4. run_sweep stages per-run dirs with a local params.json each.
 #   5. a synthetic sweep flows through observables -> Sobol -> SMoRe ParS.
+#
+# Anything that prints [FAIL] needs attention; all [ok] means the machinery is
+# sound and the only remaining unknown is CC3D itself (run one sim to confirm
+# it produces datafiles/mean_concentration.txt).
 
 import json
 import os
@@ -15,7 +25,7 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SIM = HERE  
+SIM = HERE  # simulation files live next to this script
 SMORE = HERE / "smore"
 
 PARAM_NAMES = ["keil8", "km1il6", "km2il10", "km2tgf", "lnril8", "sigmoidb",
@@ -35,8 +45,8 @@ def main():
     tmp = Path(tempfile.mkdtemp(prefix="combi3d_verify_"))
     print(f"workspace: {tmp}\n")
 
-    # manifest generation 
-    print("1. setup_runs.py - manifest generation")
+    # 1. manifest generation -------------------------------------------------
+    print("1. setup_runs.py — manifest generation")
     man_path = tmp / "manifest.json"
     subprocess.run([sys.executable, str(SIM / "setup_runs.py"),
                     "--n-runs", "10", "--seed", "42", "--out", str(man_path)],
@@ -62,8 +72,8 @@ def main():
                   for n in ("init_ec", "init_n", "init_m", "init_f"))
     check("cell counts are integers", ints_ok)
 
-    # param_loader applies a vector 
-    print("\n2. param_loader - applies per-run vector")
+    # 2. param_loader applies a vector ---------------------------------------
+    print("\n2. param_loader — applies per-run vector")
     run7 = next(r for r in man["runs"] if r["run_id"] == "run_0007")
     pjson = tmp / "p7.json"
     json.dump(run7, open(pjson, "w"))
@@ -85,8 +95,8 @@ def main():
     check("derived actnr sees overridden lnril8",
           abs(vals["actnr_lnril8"] - run7["params"]["lnril8"]) < 1e-12)
 
-    # fail-loud behaviour 
-    print("\n3. param_loader - fails loud on bad input")
+    # 3. fail-loud behaviour -------------------------------------------------
+    print("\n3. param_loader — fails loud on bad input")
     bad = tmp / "bad.json"
     json.dump({"params": {"keil8": 1e-8, "not_a_param": 9}}, open(bad, "w"))
     r = subprocess.run([sys.executable, "-c", "import params_transitions"],
@@ -99,8 +109,8 @@ def main():
                        capture_output=True, text=True)
     check("missing file -> crash (no silent baseline)", r.returncode != 0)
 
-    # run_sweep staging 
-    print("\n4. run_sweep.py - per-run directory staging")
+    # 4. run_sweep staging ---------------------------------------------------
+    print("\n4. run_sweep.py — per-run directory staging")
     (tmp / "combi3D.cc3d").write_text("<Simulation/>\n")
     subprocess.run([sys.executable, str(SIM / "run_sweep.py"),
                     "--manifest", str(man_path), "--mode", "slurm",
@@ -126,8 +136,8 @@ def main():
     check("local params.json loads without env var",
           loaded == str(run7["params"]["init_ec"]))
 
-    # calibration pipeline on a synthetic sweep 
-    print("\n5. smore - observables -> Sobol -> SMoRe ParS (synthetic)")
+    # 5. calibration pipeline on a synthetic sweep ---------------------------
+    print("\n5. smore — observables -> Sobol -> SMoRe ParS (synthetic)")
     syn = tmp / "syn_out"
     _make_synthetic_sweep(man, syn)
     res_path = tmp / "calib.json"
@@ -149,8 +159,8 @@ def main():
         check(f"Sobol recovers injected drivers ({overlap}/5 in top-5)",
               overlap >= 3)
 
-    print("\n" + ("ALL CHECKS PASSED - machinery is sound."
-                  if ok else "SOME CHECKS FAILED - see [FAIL] above."))
+    print("\n" + ("ALL CHECKS PASSED — machinery is sound."
+                  if ok else "SOME CHECKS FAILED — see [FAIL] above."))
     print("Remaining unknown: CC3D itself. Run one sim and confirm "
           "outputs/<run>/datafiles/mean_concentration.txt appears.")
     sys.exit(0 if ok else 1)
@@ -183,6 +193,7 @@ def _make_synthetic_sweep(man, root):
                         "il10std", "tnfstd", "tgfstd"])
             for i in range(T):
                 w.writerow([int(mcs[i])] + [f"{v:.6e}" for v in arr[i]] + ["0"]*6)
+
 
 if __name__ == "__main__":
     main()

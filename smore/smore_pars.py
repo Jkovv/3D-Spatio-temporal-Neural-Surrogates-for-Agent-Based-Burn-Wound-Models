@@ -1,3 +1,21 @@
+#!/usr/bin/env python3
+# combi3D/Simulation/smore/smore_pars.py
+#
+# SMoRe ParS (Surrogate Modeling for Reconstructing Parameters) for the burn ABM.
+# Follows Jain et al. 2022 (single/low-dim observable) extended toward Bergman
+# et al. 2024 (multi-dimensional observable):
+#
+#   STAGE A  surrogate fit:   for each run, fit a cheap phenomenological model to
+#            its mean-concentration trajectory, giving theta_SM (surrogate params).
+#   STAGE B  mapping:         learn GP : theta_ABM -> theta_SM across runs.
+#   STAGE C  inversion/recovery:  given an observed trajectory, fit theta_SM, then
+#            invert the mapping to recover theta_ABM. Validated leave-one-out:
+#            hold out each run, recover its theta_ABM, compare to ground truth.
+#
+# The surrogate per cytokine is a saturating-growth (logistic-like) curve, which
+# matches the observed mean-concentration shapes (monotone rise to plateau). This
+# is intentionally cheap and fast, per the supervisor's "easy and fast model".
+
 import json
 import numpy as np
 from scipy.optimize import curve_fit
@@ -8,16 +26,16 @@ from sklearn.preprocessing import StandardScaler
 CYTOKINES = ["il8", "il1", "il6", "il10", "tnf", "tgf"]
 
 
-# A: phenomenological per-cytokine surrogate 
+# ── STAGE A: phenomenological per-cytokine surrogate ────────────────────────
 def _saturating(t, A, k, t0):
     """Logistic saturating curve: A / (1 + exp(-k (t - t0)))."""
     return A / (1.0 + np.exp(-k * (t - t0)))
 
 
 def fit_surrogate_one(t, y):
-    """Fits (A, k, t0) to one cytokine trajectory. Returns 3 surrogate params."""
+    """Fit (A, k, t0) to one cytokine trajectory. Returns 3 surrogate params."""
     t = np.asarray(t, float); y = np.asarray(y, float)
-    tn = (t - t[0]) / max(1e-9, (t[-1] - t[0])) # normalise time to [0,1]
+    tn = (t - t[0]) / max(1e-9, (t[-1] - t[0]))      # normalise time to [0,1]
     A0 = max(y.max(), 1e-30)
     p0 = [A0, 8.0, 0.5]
     bounds = ([0.0, 0.0, -1.0], [10 * A0 + 1e-30, 200.0, 2.0])
@@ -30,6 +48,10 @@ def fit_surrogate_one(t, y):
 
 
 def fit_surrogates(Y, t_grid):
+    """
+    Y: (n_runs, T, 6) -> theta_SM: (n_runs, 6*3) = [A,k,t0] per cytokine.
+    Returns theta_SM and the list of surrogate-param names.
+    """
     n, T, C = Y.shape
     names = [f"{CYTOKINES[c]}_{p}" for c in range(C) for p in ("A", "k", "t0")]
     out = np.zeros((n, C * 3))
@@ -39,7 +61,7 @@ def fit_surrogates(Y, t_grid):
     return out, names
 
 
-# B: GP mapping theta_ABM -> theta_SM 
+# ── STAGE B: GP mapping theta_ABM -> theta_SM ───────────────────────────────
 class ABMtoSMMapping:
     def __init__(self):
         self.x_scaler = None; self.y_scaler = None; self.gps = []
@@ -67,9 +89,13 @@ class ABMtoSMMapping:
         return self.y_scaler.inverse_transform(pred)
 
 
-# C: inversion (recover theta_ABM from a target theta_SM) 
+# ── STAGE C: inversion (recover theta_ABM from a target theta_SM) ───────────
 def recover_theta_abm(mapping, theta_sm_target, bounds_lo, bounds_hi,
                       n_restarts=12, seed=0):
+    """
+    Invert the GP mapping: find theta_ABM whose predicted theta_SM best matches
+    the target. Bounded least-squares over the ABM parameter box, multi-start.
+    """
     from scipy.optimize import least_squares
     rng = np.random.default_rng(seed)
     sm_scaler = mapping.y_scaler
@@ -97,6 +123,11 @@ def recover_theta_abm(mapping, theta_sm_target, bounds_lo, bounds_hi,
 
 def leave_one_out_recovery(theta_abm, theta_sm, param_names, bounds,
                            selected_idx=None, seed=42):
+    """
+    For each run i: fit mapping on all-but-i, recover theta_ABM[i] from its
+    theta_SM, compare to ground truth. Returns per-param normalised errors and
+    R2 of recovered vs true.
+    """
     n, p = theta_abm.shape
     idx = selected_idx if selected_idx is not None else list(range(p))
     lo = np.array([bounds[param_names[k]]["low"] for k in idx])
@@ -130,6 +161,7 @@ def leave_one_out_recovery(theta_abm, theta_sm, param_names, bounds,
         "nrmse_mean": float(np.mean(nrmse)),
     }
 
+
 if __name__ == "__main__":
     import argparse
     from observables import load_sweep
@@ -153,6 +185,6 @@ if __name__ == "__main__":
     json.dump(res, open(args.out, "w"), indent=2)
     print("SMoRe ParS leave-one-out recovery:")
     for pn in res["selected_params"]:
-        print(f"{pn:10s}  nRMSE={res['nrmse_per_param'][pn]:.3f}  "
+        print(f"  {pn:10s}  nRMSE={res['nrmse_per_param'][pn]:.3f}  "
               f"R2={res['r2_per_param'][pn]:.3f}")
     print(f"mean nRMSE = {res['nrmse_mean']:.3f}  -> {args.out}")

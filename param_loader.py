@@ -28,7 +28,7 @@ import json
 import os
 import sys
 
-# Whitelist of parameters that are allowed to be overridden.
+# ── Whitelist of parameters that are allowed to be overridden. ───────────────
 # A name not in this set is rejected (catches manifest/code drift early).
 # "kind" controls post-processing:
 #     "int_count" -> rounded and cast to int (cell counts feed range()).
@@ -58,13 +58,13 @@ _ALLOWED = {
     "tranril6": "float",
     "sigmoida": "float",
     "sigmoidb": "float",
-    # initial cell counts (params_biology) - MUST be int, they feed range()
+    # initial cell counts (params_biology) -- MUST be int, they feed range()
     "init_ec": "int_count",
     "init_n":  "int_count",
     "init_m":  "int_count",
     "init_f":  "int_count",
     "init_my": "int_count",
-    # replenishment counts (params_biology) - also feed integer loops
+    # replenishment counts (params_biology) -- also feed integer loops
     "replen_n":  "int_count",
     "replen_f":  "int_count",
     "replen_my": "int_count",
@@ -72,8 +72,8 @@ _ALLOWED = {
 }
 
 _ENV_VAR = "SMORE_PARAMS"
-_cache = None  # parsed {name: value} after type coercion
-_loaded = False # whether we've attempted a load this process
+_cache = None          # parsed {name: value} after type coercion
+_loaded = False        # whether we've attempted a load this process
 
 
 def _coerce(name, raw):
@@ -97,10 +97,18 @@ def _coerce(name, raw):
 
 
 def _resolve_param_path():
+    """
+    Locate this run's parameter JSON. Priority:
+      1. $SMORE_PARAMS (explicit path), if set.
+      2. params.json sitting next to this module (per-run-directory layout:
+         each run has its own Simulation/ copy with its own params.json).
+    Returns (path or None, source_str).
+    """
     env_path = os.environ.get(_ENV_VAR)
     if env_path:
         return env_path, f"${_ENV_VAR}"
-    local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "params.json")
+    local = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "params.json")
     if os.path.isfile(local):
         return local, "local params.json"
     return None, "none"
@@ -120,13 +128,17 @@ def _load():
         return _cache
 
     if not os.path.isfile(path):
+        # Hard error: an intended sweep run must never silently fall back.
         raise FileNotFoundError(
-            f"[param_loader] parameter file {path!r} (from {source}) does not exist"
-            f"Refusing to run on baseline for what was meant to be a sweep run.")
+            f"[param_loader] parameter file {path!r} (from {source}) does not "
+            f"exist. Refusing to run on baseline for what was meant to be a "
+            f"sweep run.")
 
     with open(path) as f:
         doc = json.load(f)
 
+    # Accept either a bare {name: value} dict or a manifest-style
+    # {"run_id": ..., "params": {...}} object.
     if "params" in doc and isinstance(doc["params"], dict):
         raw_params = doc["params"]
         run_id = doc.get("run_id", "?")
@@ -151,12 +163,18 @@ def _load():
 
 
 def get_overrides():
+    """Return the cached {name: coerced_value} dict (possibly empty)."""
     return _load()
 
 
 def apply_to(namespace, allowed_subset):
     """
     Inject overrides into a module namespace (the dict returned by globals()).
+
+    allowed_subset: iterable of names this particular module is responsible
+    for. Only those keys are written, so params_biology won't clobber a
+    transitions-only name and vice versa, and a mis-scoped override surfaces
+    as an unused-key warning rather than a silent wrong write.
     """
     ov = get_overrides()
     subset = set(allowed_subset)

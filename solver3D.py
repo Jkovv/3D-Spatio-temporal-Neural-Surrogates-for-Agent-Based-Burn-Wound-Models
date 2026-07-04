@@ -14,7 +14,7 @@ import numpy as np
 def tester3D(mcs, cellpresente, cellpresentndn, cellpresentna, cellpresentm1, cellpresentm2, cytokines, mesh):
     """
     Solves 6 coupled diffusion PDEs on a 3D FiPy mesh.
-    No blood-border Dirichlet constraints.
+    No blood-border Dirichlet constraints — zero-flux (Neumann) on all faces.
     """
     il8  = CellVariable(mesh=mesh, value=cytokines[0])
     il1  = CellVariable(mesh=mesh, value=cytokines[1])

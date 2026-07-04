@@ -1,3 +1,18 @@
+#!/usr/bin/env python3
+# combi3D/Simulation/smore/observables.py
+#
+# Loads (theta_ABM, observable_trajectory) pairs from a completed sweep.
+#
+# Each run directory produced by run_sweep.py contains:
+#   params.json                       <- theta_ABM for this run (ground truth)
+#   datafiles/mean_concentration.txt  <- CSV: meanconcen,il8mean,...,tgfstd
+#   datafiles/cellcount.txt           <- CSV: mcsteps,1..10 (cell-type counts)
+#   LatticeData/CytoStep_*.npz        <- full fields (not needed for scalar SMoRe)
+#
+# The scalar observable used by SMoRe ParS (Jain 2022 style) is the per-cytokine
+# mean-concentration time series il*_mean(t). This module returns, for every run,
+# its theta vector and a (T, 6) array of mean concentrations on a common time grid.
+
 import json
 import csv
 from pathlib import Path
@@ -7,7 +22,9 @@ import numpy as np
 CYTOKINES = ["il8", "il1", "il6", "il10", "tnf", "tgf"]
 _MEAN_COLS = [f"{c}mean" for c in CYTOKINES]
 
+
 def _read_mean_concentration(path):
+    """Return (mcs_array, means (T,6))."""
     with open(path) as f:
         rows = list(csv.reader(f))
     header = rows[0]
@@ -24,6 +41,7 @@ def _read_mean_concentration(path):
 
 
 def _read_theta(run_dir, param_names):
+    """Read theta_ABM from params.json (fallback resolved_params.json)."""
     p = run_dir / "params.json"
     if not p.exists():
         p = run_dir / "resolved_params.json"
@@ -38,7 +56,9 @@ def _read_theta(run_dir, param_names):
         raise KeyError(f"{run_dir}: params.json missing {missing}")
     return np.array([float(params[n]) for n in param_names])
 
+
 def _resample(mcs, series, n_points):
+    """Linearly resample a (T,K) series onto n_points evenly spaced in mcs."""
     if len(mcs) == n_points and np.all(np.diff(mcs) > 0):
         grid = np.linspace(mcs[0], mcs[-1], n_points)
         if np.allclose(grid, mcs):
@@ -51,6 +71,15 @@ def _resample(mcs, series, n_points):
 
 
 def load_sweep(sim_root, param_names, n_time=None):
+    """
+    Walk run_* dirs under sim_root, returning:
+        theta   : (n_runs, n_params)
+        Y       : (n_runs, T, 6) mean-concentration trajectories
+        run_ids : list[str]
+        t_grid  : (T,) common mcs grid
+    Runs missing their observable are skipped with a warning; runs missing
+    params.json raise (we must never silently drop the theta<->trajectory link).
+    """
     sim_root = Path(sim_root)
     run_dirs = sorted(d for d in sim_root.iterdir()
                       if d.is_dir() and d.name.startswith("run_"))
@@ -59,7 +88,7 @@ def load_sweep(sim_root, param_names, n_time=None):
 
     raw = []
     for rd in run_dirs:
-        mc_path = rd / "datafiles"/"mean_concentration.txt"
+        mc_path = rd / "datafiles" / "mean_concentration.txt"
         if not mc_path.exists():
             print(f"[observables] WARNING {rd.name}: no mean_concentration.txt, "
                   f"skipping")
@@ -87,6 +116,11 @@ def load_sweep(sim_root, param_names, n_time=None):
 
 
 def summarize_observable(Y):
+    """
+    Collapse (n_runs, T, 6) trajectories into a compact per-run feature vector
+    used as the SMoRe ParS observable: for each cytokine, [final, mean, max, auc].
+    Returns (n_runs, 6*4).
+    """
     n, T, C = Y.shape
     feats = []
     for c in range(C):
@@ -99,8 +133,10 @@ def summarize_observable(Y):
         feats.append(np.stack([final, mean, mx, auc], axis=1))
     return np.concatenate(feats, axis=1)
 
+
 FEATURE_NAMES = [f"{c}_{stat}" for c in CYTOKINES
                  for stat in ("final", "mean", "max", "auc")]
+
 
 if __name__ == "__main__":
     import argparse
