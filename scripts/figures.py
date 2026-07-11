@@ -49,7 +49,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
-# ---------------------------------------------------------------- config ----
+# config 
 RUN   = "run_0062"
 GRID  = 50
 SEEDS = [1, 42, 100]
@@ -148,7 +148,7 @@ def _bar_labels(ax, xs, means, stds, fmt="{:.3f}", fs=6):
         ax.text(x, y, lbl, ha="center", va=va, fontsize=fs, fontweight="bold")
 
 
-# --------------------------------------------------- JSON metric helpers ----
+# JSON metric helpers 
 def load_res(model, cyt, seed):
     p = MODELS_ROOT / MODEL_DIR[model] / f"res_{cyt}_{RUN}_{GRID}_{seed}.json"
     return json.load(open(p)) if p.exists() else None
@@ -197,9 +197,7 @@ def time_seeds(model, cyt, field):
     return float(np.mean(vals)), float(np.std(vals, ddof=0))
 
 
-# =====================================================================
 #  SURROGATE CHART FIGURES
-# =====================================================================
 def figB1():
     """Global R2 (Near & Far) grouped bars, error bars over seeds."""
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.0), sharey=True)
@@ -343,9 +341,7 @@ def figE4():
     savef(fig, "F3_midplane_r2")
 
 
-# =====================================================================
 #  CALIBRATION CHART FIGURES  (new: Sobol + recovery)
-# =====================================================================
 def _load_calib(name="calibration_results_topk10.json"):
     for base in (SWEEP_ROOT, Path(".")):
         p = base / name
@@ -401,11 +397,14 @@ def figK2():
     fig = plt.figure(figsize=(11.0, 3.4))
     gs = fig.add_gridspec(1, 3, wspace=0.34)
 
-    # (a) recovered vs true for the two best-recovered parameters
+    # (a) recovered vs true for the two best-recovered parameters.
+    # Colours: green (CC[2]) + purple (CC[4]) from the cytokine palette --
+    # chosen because the recovery panels already use CC[3] (blue) and CC[0]
+    # (red) for kinetic/initial, so these two are free and don't clash.
     ax = fig.add_subplot(gs[0, 0])
     best2 = sorted(params, key=lambda p: r2[p], reverse=True)[:2]
-    mk = {"o": None}
     marks = ["o", "s"]
+    scatter_cols = [CC[2], CC[4]]        # green, purple
     for pi, p in enumerate(best2):
         j = params.index(p)
         t = truth[:, j]; rv = recovered[:, j]
@@ -414,13 +413,15 @@ def figK2():
         tn = (t - lo) / (hi - lo + 1e-12)
         rn = (rv - lo) / (hi - lo + 1e-12)
         ax.scatter(tn, rn, s=18, marker=marks[pi], alpha=0.6,
+                   color=scatter_cols[pi],
                    edgecolors="black", linewidths=0.3,
                    label=f"{p} ($R^2$={r2[p]:.2f})")
     ax.plot([0, 1], [0, 1], color="gray", ls="--", lw=1)
     ax.set_xlabel("True (normalised)"); ax.set_ylabel("Recovered (normalised)")
     ax.set_title("Recovered vs.\\ true", fontsize=10)
     ax.set_xlim(-0.05, 1.05); ax.set_ylim(-0.05, 1.05)
-    ax.legend(fontsize=7, loc="upper left")
+    ax.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.18),
+              ncol=2, frameon=False, columnspacing=1.2, handletextpad=0.4)
 
     # (b) recovery R2 per parameter, ordered by Sobol rank
     ax = fig.add_subplot(gs[0, 1])
@@ -456,13 +457,11 @@ def figK2():
                Patch(fc=TYPE_COL["initial"], ec="black", label="initial population")]
     fig.legend(handles=handles, loc="lower center", ncol=2, fontsize=8,
                bbox_to_anchor=(0.5, -0.03))
-    fig.subplots_adjust(bottom=0.18, top=0.90, left=0.06, right=0.98)
+    fig.subplots_adjust(bottom=0.24, top=0.90, left=0.06, right=0.98)
     savef(fig, "F5_recovery")
 
 
-# =====================================================================
 #  FIELD FIGURES  (preprocessed + weights)
-# =====================================================================
 def _dp():
     return PREP_ROOT / RUN / f"{GRID}x{GRID}x{GRID}"
 
@@ -533,9 +532,7 @@ def figS():
     handles = [Patch(fc=SPLIT_COL[s], alpha=0.3, label=s) for s in SPLIT_SPANS]
     fig.legend(handles=handles, loc="lower center", ncol=4, fontsize=7,
                bbox_to_anchor=(0.5, -0.04), framealpha=0.9, edgecolor="gray")
-    fig.suptitle(f"Volumetric cytokine concentrations over 100\\,h ($50^3$, {RUN})",
-                 fontsize=11)
-    fig.tight_layout(rect=[0, 0.05, 1, 0.97])
+    fig.tight_layout(rect=[0, 0.05, 1, 1])
     savef(fig, "F1_concentrations")
 
 
@@ -550,7 +547,7 @@ def figA(frame=88):
     savef(fig, "F1_eda_slices")
 
 
-# ---- weight-based prediction (for GT vs Pred slice figures) ----
+# weight-based prediction (for GT vs Pred slice figures)
 def _load_field_deps():
     import tensorflow as tf
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -745,9 +742,7 @@ def figE(frame=88):
     savef(fig, "F3_diff_models")
 
 
-# =====================================================================
 #  DISPATCH
-# =====================================================================
 CHART_FIGS = {"B1": figB1, "B4": figB4, "B3": figB3, "E4": figE4,
               "K1": figK1, "K2": figK2}
 FIELD_FIGS = {"A": figA, "S": figS, "E": figE}
