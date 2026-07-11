@@ -1,0 +1,24 @@
+========================================================================
+SOBOL CONVERGENCE  (are 100 runs enough?)
+========================================================================
+sub-samples: [60, 70, 80, 90, 100]   n_saltelli=512
+tracking top-5 parameters at full N=100: ['sigmoidb', 'keil8', 'init_ec', 'km1il6', 'init_m']
+
+param      N=60      N=70      N=80      N=90      N=100     
+-------------------------------------------------------------
+sigmoidb   0.485     0.493     0.473     0.466     0.475     
+keil8      0.143     0.159     0.212     0.190     0.200     
+init_ec    0.111     0.117     0.108     0.145     0.128     
+km1il6     0.100     0.098     0.091     0.111     0.115     
+init_m     0.001     0.004     0.000     0.053     0.099     
+
+Ranking stability (top-5 set overlap with full N):
+  N= 60: 4/5 same set
+  N= 70: 4/5 same set
+  N= 80: 4/5 same set
+  N= 90: 4/5 same set
+  N=100: identical order
+
+Max |ST(N=100) - ST(N=90)| over top-5: 0.046
+  -> leading indices change by <0.05 over the last step: converged.
+========================================================================

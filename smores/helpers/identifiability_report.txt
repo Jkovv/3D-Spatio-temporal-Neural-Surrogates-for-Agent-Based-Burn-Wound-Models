@@ -1,0 +1,38 @@
+======================================================================
+IDENTIFIABILITY ANALYSIS - sensitivity is not identifiability
+======================================================================
+source: calibration_results_topk10.json
+non-identifiable threshold: recovery R2 < 0.0
+
+rank       param   Sobol_ST  recovery_R2    nRMSE                       verdict
+------------------------------------------------------------------------------
+   1    sigmoidb      0.457       +0.439    0.216      sensitive & identifiable
+   2       keil8      0.216       +0.833    0.118      sensitive & identifiable
+   3     init_ec      0.109       -0.454    0.348  SENSITIVE but NOT identifiable
+   4      km1il6      0.078       +0.374    0.228         weak but identifiable
+   5     km2il10      0.077       +0.481    0.208         weak but identifiable
+   6      init_f      0.077       -1.395    0.456  neither (correctly filtered)
+   7      km2tgf      0.072       +0.014    0.287         weak but identifiable
+   8      init_m      0.059       -2.158    0.513  neither (correctly filtered)
+   9      lnril8      0.046       -1.472    0.454  neither (correctly filtered)
+  10      init_n      0.019       -1.501    0.455  neither (correctly filtered)
+
+KEY FINDING:
+  * init_ec: high Sobol ST (influences observables) but recovery R2=-0.454 (< 0.0).
+    -> A high total-order index does NOT guarantee identifiability.
+    -> Sensitivity ranks influence; recovery tests invertibility.
+
+======================================================================
+EFFECT OF THE FILTER: top-5-by-Sobol  vs  5-identifiable
+======================================================================
+  top-5 by Sobol      : ['sigmoidb', 'keil8', 'init_ec', 'km1il6', 'km2il10']
+    mean nRMSE        = 0.237
+  5 identifiable      : ['sigmoidb', 'keil8', 'km1il6', 'km2il10', 'km2tgf']
+    mean nRMSE        = 0.241
+
+  swapping the non-identifiable init_ec for km2tgf lowers mean
+  nRMSE by -0.004 (-2% relative improvement).
+  -> Filtering on identifiability, not sensitivity alone, gives the
+     better-constrained calibration.
+
+======================================================================

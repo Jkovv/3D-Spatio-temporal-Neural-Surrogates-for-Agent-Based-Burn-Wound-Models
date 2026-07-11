@@ -1,0 +1,14 @@
+LatticeData/ 
+*.vtk 
+
+# preprocessed
+preprocessed_3d/
+*.npz
+
+# slurm logs
+*.out
+*.err
+
+# weights 
+*.h5
+*.weights.h5
