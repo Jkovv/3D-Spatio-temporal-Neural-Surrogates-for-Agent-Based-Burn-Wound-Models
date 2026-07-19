@@ -4,6 +4,7 @@ LatticeData/
 # preprocessed
 preprocessed_3d/
 *.npz
+preprocessed_3d_infer/
 
 # slurm logs
 *.out
