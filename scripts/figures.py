@@ -394,8 +394,8 @@ def figK2():
     recovered = np.array(rec["recovered"])   # (100, 10)
     truth = np.array(rec["truth"])           # (100, 10)
 
-    fig = plt.figure(figsize=(11.0, 3.4))
-    gs = fig.add_gridspec(1, 3, wspace=0.34)
+    fig = plt.figure(figsize=(11.0, 3.6), constrained_layout=True)
+    gs = fig.add_gridspec(1, 3)
 
     # (a) recovered vs true for the two best-recovered parameters.
     # Colours: green (CC[2]) + purple (CC[4]) from the cytokine palette --
@@ -455,31 +455,25 @@ def figK2():
 
     handles = [Patch(fc=TYPE_COL["kinetic"], ec="black", label="kinetic"),
                Patch(fc=TYPE_COL["initial"], ec="black", label="initial population")]
-    fig.legend(handles=handles, loc="lower center", ncol=2, fontsize=8,
-               bbox_to_anchor=(0.5, -0.03))
-    fig.subplots_adjust(bottom=0.24, top=0.90, left=0.06, right=0.98)
+    fig.legend(handles=handles, loc="outside lower center", ncol=2, fontsize=8)
     savef(fig, "F5_recovery")
 
 
-#  FIELD FIGURES  (preprocessed + weights)
+#  FIELD FIGURES (preprocessed + weights)
 def _dp():
     return PREP_ROOT / RUN / f"{GRID}x{GRID}x{GRID}"
-
 
 def _clip_max(cyt):
     meta = json.load(open(_dp() / "metadata.json"))
     return float(meta["scaling"]["max"][CYT_INDEX[cyt]])
 
-
 def _denorm(x, cmax):
     return (np.asarray(x, np.float64) + 1.0) / 2.0 * cmax
-
 
 def _raw_field(cyt, frame):
     idx = CYT_INDEX[cyt]
     Y = np.load(_dp() / "Y_target.npy").astype(np.float32)[..., idx]
     return _denorm(Y[frame], _clip_max(cyt))
-
 
 def _raw_trajectory():
     Y = np.load(_dp() / "Y_target.npy").astype(np.float32)
@@ -488,7 +482,6 @@ def _raw_trajectory():
     for cyt, idx in CYT_INDEX.items():
         out[..., idx] = _denorm(Y[..., idx], float(meta["scaling"]["max"][idx]))
     return out
-
 
 def _ortho_slices(fig, gs_row, vol, cmap, label, vmax=None, show_titles=True, cbar=True):
     G = vol.shape[0]; h = G // 2
@@ -508,7 +501,6 @@ def _ortho_slices(fig, gs_row, vol, cmap, label, vmax=None, show_titles=True, cb
             cb = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.02, format="%.0e")
             cb.ax.tick_params(labelsize=4.5, pad=1)
             cb.ax.yaxis.get_offset_text().set_fontsize(4)
-
 
 def figS():
     """Six-cytokine mean trajectories, chronological split shaded."""
@@ -535,7 +527,6 @@ def figS():
     fig.tight_layout(rect=[0, 0.05, 1, 1])
     savef(fig, "F1_concentrations")
 
-
 def figA(frame=88):
     """xy/xz/yz mid-plane slices, IL-8 vs IL-10, ground truth."""
     fig = plt.figure(figsize=(7.6, 4.6))
@@ -546,13 +537,11 @@ def figA(frame=88):
                       FIELD_CMAP, cl)
     savef(fig, "F1_eda_slices")
 
-
-# weight-based prediction (for GT vs Pred slice figures)
+# weight-based prediction (for GT vs Pred slice figures) 
 def _load_field_deps():
     import tensorflow as tf
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
     return tf
-
 
 def _build_deeponet(tf, hidden, p):
     class Branch(tf.keras.layers.Layer):
@@ -573,7 +562,6 @@ def _build_deeponet(tf, hidden, p):
             b = s.branch(inp[0], training=training); t = s.trunk(inp[1])
             return tf.expand_dims(tf.einsum("bp,bnp->bn", b, t) + s.bias, -1)
     return DON(hidden, p)
-
 
 def _build_unet(tf, grid, in_ch, base_filters, depth, dropout):
     def cb(x, f):
@@ -599,7 +587,6 @@ def _build_unet(tf, grid, in_ch, base_filters, depth, dropout):
             if any(pp[0] + pp[1] > 0 for pp in pad): x = tf.keras.layers.ZeroPadding3D(tuple(map(tuple, pad)))(x)
         x = tf.keras.layers.Concatenate()([x, s]); x = cb(x, base_filters * (2 ** i))
     return tf.keras.Model(inp, tf.keras.layers.Conv3D(1, 1, padding="same")(x))
-
 
 def _load_weights_robust(model, w_path):
     import h5py
@@ -783,7 +770,6 @@ def main():
             print(f"    FAILED: {e}")
             traceback.print_exc()
     print(f"Done -> {FIGDIR}/")
-
 
 if __name__ == "__main__":
     main()
