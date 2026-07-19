@@ -13,3 +13,5 @@ preprocessed_3d_infer/
 # weights 
 *.h5
 *.weights.h5
+
+sweep/
