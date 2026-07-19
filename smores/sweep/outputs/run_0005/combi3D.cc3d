@@ -1,6 +1,0 @@
-<Simulation version="4.2.5">
-   <PythonScript Type="PythonScript">Simulation/combi3D.py</PythonScript>
-   <Resource Type="Python">Simulation/combi3DSteppables.py</Resource>
-   <Resource Type="Python">Simulation/variablevals3D.py</Resource>
-   <Resource Type="Python">Simulation/solver3D.py</Resource>
-</Simulation>

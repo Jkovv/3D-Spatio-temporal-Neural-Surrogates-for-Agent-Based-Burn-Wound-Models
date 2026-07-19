@@ -4,6 +4,7 @@ LatticeData/
 # preprocessed
 preprocessed_3d/
 *.npz
+preprocessed_3d_infer/
 
 # slurm logs
 *.out
@@ -12,3 +13,5 @@ preprocessed_3d/
 # weights 
 *.h5
 *.weights.h5
+
+sweep/
