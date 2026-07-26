@@ -1,0 +1,35 @@
+[1/4] loading the external sweep ...
+      curves file: 870 trajectories, 98 time points (0.0-48.5 h)
+      222 curves have missing points; these are dropped point-wise and the curve is kept, following the source publication's own handling (x = x[~np.isnan(x)] in their DTWImplement.py). Curves are therefore of unequal length, which the per-curve surface fit accommodates because time is normalised to [0,1] separately for each.
+      curves showing no growth are RETAINED: reduced-genome strains fail to grow in some media, and the source publication records those as observations (K = r = t = 0), not missing data. Excluding them would remove exactly the cases where the genome effect is strongest.
+      870 usable curves, 9 inputs
+      inputs: ['genome_Mb', 'log_Thiamine', 'log_K+', 'log_PO43-', 'log_Fe2+', 'log_SO42-', 'log_NH4+', 'log_Mg2+', 'log_Glucose']
+      OD600 range -0.0060-1.1350
+
+[2/4] stage A: fitting the saturating-logistic surface ...
+      [200/870] 12s
+      [400/870] 13s
+      [600/870] 15s
+      [800/870] 16s
+      858/870 curves show growth, 12 do not
+      on growing curves: R2 = +0.9320 +/- 0.1870 (median +0.9863, min -1.0805)
+      above 0.99: 356/858
+      above 0.90: 764/858
+      for reference, the same surface reaches ~0.87 on the ABM's IL-8 trajectories
+
+[3/4] Sobol screen on the observables ...
+      total-order indices:
+        log_K+         ST = 0.3397
+        genome_Mb      ST = 0.2836
+        log_NH4+       ST = 0.2542
+        log_Glucose    ST = 0.2286
+        log_PO43-      ST = 0.1510
+        log_Mg2+       ST = 0.0687
+        log_Fe2+       ST = 0.0480
+        log_Thiamine   ST = 0.0052
+        log_SO42-      ST = 0.0000
+      top-5: ['log_K+', 'genome_Mb', 'log_NH4+', 'log_Glucose', 'log_PO43-']
+      the source publication reports genome size as dominant for the growth parameters, glucose for curve shape
+
+[4/4] stage B: leave-one-out recovery of experimental conditions ...
+      870 leave-one-out GP fits; this is the slow step (roughly quadratic in the number of curves)
