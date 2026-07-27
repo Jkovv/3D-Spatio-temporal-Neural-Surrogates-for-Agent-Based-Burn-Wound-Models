@@ -55,7 +55,7 @@ CC3D is launched with:
 # local sanity check, no CC3D required
 python verify.py                      # must print ALL CHECKS PASSED
 
-# one-time install (~1–2 h)
+# one-time install (~1-2 h)
 sbatch install_cc3d.slurm && tail -f install_<jobid>.out
 
 # single test run - confirms CC3D produces mean_concentration.txt
@@ -107,7 +107,7 @@ trajectories. `sensitivity._fit_gp` standardises θ and y internally and returns
 
 **Emulator quality is not uniform, and this bounds the ranking.** Cross-
 validating the 24 emulators (`helpers/emulator_cv.py`, pooled out-of-fold R²,
-5-fold, refitted per fold) gives a mean of 0.590 with a range from −0.421 to
+5-fold, refitted per fold) gives a mean of 0.590 with a range from -0.421 to
 +0.991. The variation is structured along two axes at once. By cytokine: IL-8
 reaches 0.984 while IL-1β reaches 0.387, the same dense-versus-sparse ordering
 the neural surrogate shows on voxel fields. By observable type: the
@@ -139,7 +139,7 @@ cytokine - 24 scalars. Defined once in `smore/observables.py`
 constitutive sources, so it is collinear with `keil8`: multiplying one and
 dividing the other by the same factor leaves the trajectory essentially
 unchanged. It is therefore sensitive (S_T = 0.109, third of ten, and third
-again on the filtered ranking) but not recoverable (R² = −0.454). This is a
+again on the filtered ranking) but not recoverable (R² = -0.454). This is a
 property of the ABM configuration inherited from Korkmaz et al., not of the
 calibration method. It is the single case in the sweep where influence and
 invertibility come apart.
@@ -153,8 +153,8 @@ invertibility come apart.
 | Sobol, all 24 observables | `sigmoidb` 0.457, `keil8` 0.216 lead; `init_ec` third at 0.109 |
 | Sobol, 17 well-emulated | Same three leaders; `init_*` and `lnril8` collapse to ≈0 |
 | Recovery (leave-one-out) | `keil8` +0.833, `km2il10` +0.481, `sigmoidb` +0.439, `km1il6` +0.374 |
-| Recovery, non-identifiable | All four `init_*` negative; `init_ec` −0.454 despite rank 3 |
-| Surrogate in the loop | Field R² 0.987–0.998 across seeds, `keil8` recovery +0.191 to −0.077 |
+| Recovery, non-identifiable | All four `init_*` negative; `init_ec` -0.454 despite rank 3 |
+| Surrogate in the loop | Field R² 0.987-0.998 across seeds, `keil8` recovery +0.191 to -0.077 |
 | External validation (*E. coli*) | Surface fits better than on the ABM (median 0.986); no input recovered |
 
 The surrogate-in-the-loop row is the one worth internalising before reusing this code: field accuracy and parameter recoverability do not move together, and the seed with the most accurate fields recovered the parameter least well.
