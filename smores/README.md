@@ -1,4 +1,4 @@
-# combi3D — SMoRe ParS calibration pipeline
+# combi3D - SMoRe ParS calibration pipeline
 
 End-to-end, reproducible pipeline replacing the old desynced sweep. Single
 source of truth (one manifest), fail-loud parameter injection, sensitivity-first
@@ -13,7 +13,7 @@ the failure modes were:
    a `transcriptomics_overrides.py` text-generated from a manifest. If the
    manifest used to generate overrides for runs 1–4 differed from the one used
    later (or the generator was interrupted mid-loop), the overrides and the
-   manifest desynced — which is exactly what happened (overrides existed only
+   manifest desynced - which is exactly what happened (overrides existed only
    for runs 1–4; 5–10 ran on baseline).
 2. **Integer cell counts depended on a SEPARATE `param_bounds.json`.** The
    `integer:true` flags were read from a different file than the manifest; if it
@@ -48,37 +48,33 @@ CC3D is launched with the real command:
 ## Files
 
 Simulation core (drop into `combi3D/Simulation/`):
-- `setup_runs.py` — LHS manifest generator (scipy.qmc, deterministic).
-- `manifest.json` — generated sweep (10 runs × 10 params, seed 42).
-- `run_sweep.py` — stages per-run dirs; runs CC3D (local/slurm).
-- `param_loader.py` — reads local `params.json` / `$SMORE_PARAMS`, validates, caches.
-- `transcriptomics_overrides.py` — applies the per-run vector (scope-aware).
-- `params_*.py`, `combi3D.py`, `combi3DSteppables.py`, `solver3D.py`, `variablevals3D.py`, `combi3D.cc3d` — the simulation. (`variablevals3D.py` is loaded by `combi3D.cc3d` as a Resource and must be present.)
+- `setup_runs.py` - LHS manifest generator (scipy.qmc, deterministic).
+- `manifest.json` - generated sweep (10 runs × 10 params, seed 42).
+- `run_sweep.py` - stages per-run dirs; runs CC3D (local/slurm).
+- `param_loader.py` - reads local `params.json` / `$SMORE_PARAMS`, validates, caches.
+- `transcriptomics_overrides.py` - applies the per-run vector (scope-aware).
+- `params_*.py`, `combi3D.py`, `combi3DSteppables.py`, `solver3D.py`, `variablevals3D.py`, `combi3D.cc3d` - the simulation. (`variablevals3D.py` is loaded by `combi3D.cc3d` as a Resource and must be present.)
 
 Calibration package (`combi3D/Simulation/smore/`):
-- `observables.py` — loads (θ_ABM, mean-concentration trajectory) per run.
-- `sensitivity.py` — emulator-based Sobol → parameter ranking.
-- `smore_pars.py` — surrogate fit, GP θ_ABM↔θ_SM mapping, leave-one-out recovery.
-- `run_calibration.py` — orchestrates sweep → Sobol → SMoRe ParS.
+- `observables.py` - loads (θ_ABM, mean-concentration trajectory) per run.
+- `sensitivity.py` - emulator-based Sobol → parameter ranking.
+- `smore_pars.py` - surrogate fit, GP θ_ABM↔θ_SM mapping, leave-one-out recovery.
+- `run_calibration.py` - orchestrates sweep → Sobol → SMoRe ParS.
 
 Self-check:
-- `verify.py` — runs the whole pipeline without CC3D and prints [ok]/[FAIL]
+- `verify.py` - runs the whole pipeline without CC3D and prints [ok]/[FAIL]
   for every stage. **Run this first.**
 
-## Run order (Snellius, from scratch)
-
-Everything lives under your scratch:
-`/gpfs/scratch1/shared/jkowalczuk/surrogates/burns/combi3d/`
-
+## Run order (Snellius)
 ```bash
 # 0. upload + unzip the pipeline there, then:
-cd /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/combi3d/combi3D
+go to /combi3d/combi3D
 
 # 1. install miniconda + CC3D + FiPy + calibration deps (ONE TIME, ~1-2h)
 sbatch install_cc3d.slurm
 tail -f install_<jobid>.out          # wait for "DONE"
 
-# 2. single test run — confirms CC3D produces mean_concentration.txt
+# 2. single test run - confirms CC3D produces mean_concentration.txt
 sbatch test_run.slurm
 tail -f testrun_<jobid>.out           # wait for "SUCCESS"
 
@@ -91,15 +87,10 @@ python smore/run_calibration.py --sim-root ../sweep/outputs \
     --manifest manifest.json --top-k 5 --out calibration_results.json
 ```
 
-Paths assume `SCRATCH=/gpfs/scratch1/shared/jkowalczuk` and env name `cc3d`.
-Edit the variables at the top of `install_cc3d.slurm` / `test_run.slurm` if
-yours differ. Python is pinned to 3.10 to match the supervisor's working
-environment (his `.pyc` files are cpython-310).
-
 ### Local sanity check (no CC3D, any machine)
 
 ```bash
-python verify.py     # must print ALL CHECKS PASSED
+python verify.py # must print ALL CHECKS PASSED
 ```
 
 ## Method notes (for the paper)
@@ -118,7 +109,7 @@ python verify.py     # must print ALL CHECKS PASSED
 - **Observable**: per-cytokine mean concentration time series (from
   `datafiles/mean_concentration.txt`), summarised as [final, mean, max, AUC]
   per cytokine.
-- **Caveat — endothelial is frozen**: `init_ec` affects IL-8 only through the
+- **Caveat - endothelial is frozen**: `init_ec` affects IL-8 only through the
   number of IL-8 sources, so its effect is partly collinear with `keil8`.
   Note this when reading the Sobol ranking.
 
