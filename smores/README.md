@@ -1,122 +1,170 @@
-# combi3D - SMoRe ParS calibration pipeline
+# SMoRe ParS calibration pipeline for the 3D burn ABM
+## Layout
 
-End-to-end, reproducible pipeline replacing the old desynced sweep. Single
-source of truth (one manifest), fail-loud parameter injection, sensitivity-first
-calibration on the top-k identifiable parameters.
+```
+smores/
+├── manifest.json              # single source of truth: 100 runs × 10 params, LHS seed 42
+├── smore/                     # calibration package
+│   ├── observables.py         # (θ_ABM, mean-concentration trajectory) per run
+│   ├── sensitivity.py         # GP emulator -> Sobol ranking
+│   ├── smore_pars.py          # surface fit, θ_ABM↔θ_SM map, leave-one-out recovery
+│   ├── run_calibration.py     # orchestrates sweep -> Sobol -> SMoRe ParS
+│   ├── run_calibration_surrogate.py   # same, with surrogate-predicted observables
+│   ├── compare_observables.py
+│   └── spatial_observables.py
+├── helpers/ # helper files for experiments mentioned in the manusctipt
+│   ...
+└── sweep/
+    └── outputs/run_0001 … run_0100/
+        ├── params.json                        # θ for this run (ground truth)
+        ├── datafiles/mean_concentration.txt   # 101 rows: MCS + 6 means + 6 SDs
+        ├── datafiles/cellcount.txt
+        └── LatticeData/{Cyto,Cell}Step_*.npz  # 50³ fields, 6 cytokines, 101 steps
+      ...
+```
 
-## What was broken before (and is now fixed)
+`manifest.json` carries `param_names`, `bounds` (per parameter `low`/`high`
+plus a description), `baselines`, and the per-run vectors under `runs`.
+`params.json` in each run directory nests the vector under a `params` key and
+is the pairing key between θ and trajectory.
 
-The previous sweep desynced. After inspecting the original `sweep/setup_runs.py`,
-the failure modes were:
+---
 
-1. **Generated `.py` overrides, written with `repr()` of floats.** Each run got
-   a `transcriptomics_overrides.py` text-generated from a manifest. If the
-   manifest used to generate overrides for runs 1–4 differed from the one used
-   later (or the generator was interrupted mid-loop), the overrides and the
-   manifest desynced - which is exactly what happened (overrides existed only
-   for runs 1–4; 5–10 ran on baseline).
-2. **Integer cell counts depended on a SEPARATE `param_bounds.json`.** The
-   `integer:true` flags were read from a different file than the manifest; if it
-   was absent, `integer_params` was empty and cell counts were written as
-   floats (`init_ec = 101.43…`), which breaks `range()`.
-3. **Step count injected by regex into a copied `combi3D.py`.** If the pattern
-   didn't match it only warned and the run used the default step count.
-4. **No name validation.** Any key in the manifest was written blindly.
+## Parameter injection
 
-All four were silent: a misconfigured run still finished and produced output.
+Per-run-directory staging, matching the original sweep's structure and safer
+than an environment variable, since it does not depend on CC3D passing the
+environment through to the steppable process.
 
-Now: the manifest is the **only** source of truth; cell-count integer handling
-and bounds live with the parameters in one place; the loader **crashes** on
-unknown names, missing files, or non-finite values instead of falling back.
+`run_sweep.py` stages `sweep/runs/<run_id>/Simulation/` with a full copy of the
+code plus a validated `params.json`; `param_loader.py` reads that local file
+(or `$SMORE_PARAMS` if set); CC3D writes to `sweep/outputs/<run_id>/`, outside
+the run directory as CC3D requires, and `params.json` is copied there.
 
-## Parameter injection: per-run-directory layout
+CC3D is launched with:
 
-Matching the original sweep's structure (and safer than an env var, since it
-does not depend on CC3D passing the environment through to the steppable
-process):
+```
+<cc3d_python> -m cc3d.run_script --input=<run>/combi3D.cc3d --output-dir=<out>
+```
 
-- `run_sweep.py` stages `sweep/runs/<run_id>/Simulation/` with a full copy of
-  the code plus a validated `params.json`.
-- `param_loader.py` reads that local `params.json` (or `$SMORE_PARAMS` if set).
-- CC3D output goes to `sweep/outputs/<run_id>/` (outside the run dir, as CC3D
-  requires), and `params.json` is copied there so SMoRe ParS can pair θ with the
-  trajectory.
+---
 
-CC3D is launched with the real command:
-`<cc3d_python> -m cc3d.run_script --input=<run>/combi3D.cc3d --output-dir=<out>`
+## Running it
 
-## Files
-
-Simulation core (drop into `combi3D/Simulation/`):
-- `setup_runs.py` - LHS manifest generator (scipy.qmc, deterministic).
-- `manifest.json` - generated sweep (10 runs × 10 params, seed 42).
-- `run_sweep.py` - stages per-run dirs; runs CC3D (local/slurm).
-- `param_loader.py` - reads local `params.json` / `$SMORE_PARAMS`, validates, caches.
-- `transcriptomics_overrides.py` - applies the per-run vector (scope-aware).
-- `params_*.py`, `combi3D.py`, `combi3DSteppables.py`, `solver3D.py`, `variablevals3D.py`, `combi3D.cc3d` - the simulation. (`variablevals3D.py` is loaded by `combi3D.cc3d` as a Resource and must be present.)
-
-Calibration package (`combi3D/Simulation/smore/`):
-- `observables.py` - loads (θ_ABM, mean-concentration trajectory) per run.
-- `sensitivity.py` - emulator-based Sobol → parameter ranking.
-- `smore_pars.py` - surrogate fit, GP θ_ABM↔θ_SM mapping, leave-one-out recovery.
-- `run_calibration.py` - orchestrates sweep → Sobol → SMoRe ParS.
-
-Self-check:
-- `verify.py` - runs the whole pipeline without CC3D and prints [ok]/[FAIL]
-  for every stage. **Run this first.**
-
-## Run order (Snellius)
 ```bash
-# 0. upload + unzip the pipeline there, then:
-go to /combi3d/combi3D
+# local sanity check, no CC3D required
+python verify.py                      # must print ALL CHECKS PASSED
 
-# 1. install miniconda + CC3D + FiPy + calibration deps (ONE TIME, ~1-2h)
-sbatch install_cc3d.slurm
-tail -f install_<jobid>.out          # wait for "DONE"
+# one-time install (~1–2 h)
+sbatch install_cc3d.slurm && tail -f install_<jobid>.out
 
-# 2. single test run - confirms CC3D produces mean_concentration.txt
-sbatch test_run.slurm
-tail -f testrun_<jobid>.out           # wait for "SUCCESS"
+# single test run - confirms CC3D produces mean_concentration.txt
+sbatch test_run.slurm && tail -f testrun_<jobid>.out
 
-# 3. full sweep (10 runs as a SLURM array). test_run.slurm already staged the
-#    run dirs and wrote sweep/sweep_array.sh, so just submit it:
-sbatch ../sweep/sweep_array.sh
+# full sweep as a SLURM array (staged by test_run.slurm)
+sbatch sweep/sweep_array.sh
+```
 
-# 4. calibrate once all runs finish: sensitivity FIRST, then SMoRe ParS top-k
-python smore/run_calibration.py --sim-root ../sweep/outputs \
+Once the runs finish:
+
+```bash
+# sensitivity first, then SMoRe ParS on the top-k
+python smore/run_calibration.py --sim-root sweep/outputs \
     --manifest manifest.json --top-k 5 --out calibration_results.json
+
+# emulator audit - appendix table on how far the Sobol indices can be trusted
+python helpers/emulator_cv.py --sim-root sweep/outputs --manifest manifest.json \
+    --out-tex results/appendix_emulator.tex --out-csv results/emulator_cv.csv
+
+# Sobol ranking on all 24 observables vs. the well-emulated subset
+python helpers/compare_sobol.py --sim-root sweep/outputs --manifest manifest.json \
+    --cv-csv results/emulator_cv.csv --threshold 0.5 \
+    --out-tex results/appendix_sobol_filtered.tex
 ```
 
-### Local sanity check (no CC3D, any machine)
+`emulator_cv.py` and `compare_sobol.py` import `smore/observables.py` and
+`smore/sensitivity.py` rather than reimplementing anything, so the emulator
+they score is the emulator the indices stand on. Run `emulator_cv.py` before
+`compare_sobol.py` - the second consumes the first's CSV.
 
-```bash
-python verify.py # must print ALL CHECKS PASSED
-```
+Note that `compare_sobol.py` takes `--n-saltelli` (default 1024). Pass the same
+base sample the production `sensitivity.py` run used, otherwise its "All"
+column will not reproduce the main Sobol table.
 
-## Method notes (for the paper)
+---
 
-- **Sampling**: Latin Hypercube via `scipy.stats.qmc.LatinHypercube`,
-  deterministic under a fixed seed, independent of SALib so the Sobol step
-  shares no RNG state with sweep generation.
-- **Sensitivity**: at N=10 a full Saltelli design is infeasible; a GP emulator
-  is fit on the real runs and Sobol is computed on a dense emulator sample.
-  Indices are **indicative** (wide CIs), used to rank/select, not as final
-  variance attributions. Larger sweep (phase 2) gives stable indices.
-- **Calibration scope**: SMoRe ParS recovers only the **top-k** parameters from
-  the Sobol ranking. Parameters that do not move the observable are not
-  identifiable; calibrating them would depress recovery for reasons unrelated
-  to the method. This matches Jain 2022 (few params) → Bergman 2024 (high-dim).
-- **Observable**: per-cytokine mean concentration time series (from
-  `datafiles/mean_concentration.txt`), summarised as [final, mean, max, AUC]
-  per cytokine.
-- **Caveat - endothelial is frozen**: `init_ec` affects IL-8 only through the
-  number of IL-8 sources, so its effect is partly collinear with `keil8`.
-  Note this when reading the Sobol ranking.
+## Method notes
+
+**Sampling.** Latin hypercube via `scipy.stats.qmc.LatinHypercube`,
+deterministic under a fixed seed and independent of SALib, so the Sobol step
+shares no RNG state with sweep generation.
+
+**Sensitivity.** A Gaussian process is fitted per observable on the 100 real
+runs and Sobol indices are computed on a dense Saltelli sample of that
+emulator; a direct Saltelli design on the ABM would need thousands of 50³
+trajectories. `sensitivity._fit_gp` standardises θ and y internally and returns
+`(predict, gp)`.
+
+**Emulator quality is not uniform, and this bounds the ranking.** Cross-
+validating the 24 emulators (`helpers/emulator_cv.py`, pooled out-of-fold R²,
+5-fold, refitted per fold) gives a mean of 0.590 with a range from −0.421 to
++0.991. The variation is structured along two axes at once. By cytokine: IL-8
+reaches 0.984 while IL-1β reaches 0.387, the same dense-versus-sparse ordering
+the neural surrogate shows on voxel fields. By observable type: the
+integrating quantities are emulated well (mean 0.821, AUC 0.826) and the
+pointwise ones are not (final 0.111, max 0.601), with five of six final-value
+observables at or below zero. A single time point of a stochastic model, or an
+extremum over one, is dominated by realisation noise; averaging over 101 time
+points cancels it. Seventeen of 24 pass R² ≥ 0.5.
+
+**Which indices are quantitative.** Recomputing the ranking on those 17
+(`helpers/compare_sobol.py`) leaves the three leaders unmoved - `sigmoidb`,
+`keil8`, `init_ec` - while `init_m`, `init_n`, `init_f` and `lnril8` collapse to
+within 0.002 of zero. Their apparent influence was carried by observables the
+emulator was not reproducing, which is also why `init_m`'s index failed to
+settle under subsampling. Treat only the three leaders as quantitative.
+
+**Calibration scope.** SMoRe ParS recovers only the top-k from the Sobol
+ranking. Parameters that do not move the observable are not identifiable, and
+calibrating them injects an unconstrained direction that depresses recovery for
+everything else. This follows Jain 2022 (few parameters) -> Bergman 2024
+(higher-dimensional).
+
+**Observable.** Per-cytokine volume-averaged concentration time series from
+`datafiles/mean_concentration.txt`, reduced to `[final, mean, max, AUC]` per
+cytokine - 24 scalars. Defined once in `smore/observables.py`
+(`summarize_observable`, `FEATURE_NAMES`); do not redefine them anywhere else.
+
+**Endothelium is frozen.** `init_ec` affects IL-8 only through the number of
+constitutive sources, so it is collinear with `keil8`: multiplying one and
+dividing the other by the same factor leaves the trajectory essentially
+unchanged. It is therefore sensitive (S_T = 0.109, third of ten, and third
+again on the filtered ranking) but not recoverable (R² = −0.454). This is a
+property of the ABM configuration inherited from Korkmaz et al., not of the
+calibration method. It is the single case in the sweep where influence and
+invertibility come apart.
+
+---
+
+## Results this pipeline produced
+
+| Stage | Outcome |
+|---|---|
+| Sobol, all 24 observables | `sigmoidb` 0.457, `keil8` 0.216 lead; `init_ec` third at 0.109 |
+| Sobol, 17 well-emulated | Same three leaders; `init_*` and `lnril8` collapse to ≈0 |
+| Recovery (leave-one-out) | `keil8` +0.833, `km2il10` +0.481, `sigmoidb` +0.439, `km1il6` +0.374 |
+| Recovery, non-identifiable | All four `init_*` negative; `init_ec` −0.454 despite rank 3 |
+| Surrogate in the loop | Field R² 0.987–0.998 across seeds, `keil8` recovery +0.191 to −0.077 |
+| External validation (*E. coli*) | Surface fits better than on the ABM (median 0.986); no input recovered |
+
+The surrogate-in-the-loop row is the one worth internalising before reusing this code: field accuracy and parameter recoverability do not move together, and the seed with the most accurate fields recovered the parameter least well.
+A surrogate intended for calibration has to be validated on a recovery task, not only on a field-accuracy metric, and across seeds rather than at one.
+
+---
 
 ## Status
 
 Validated end-to-end on a synthetic sweep with known θ-dependence: Sobol
-recovered exactly the injected drivers and SMoRe ParS recovered them with
-positive R². On real CC3D output the numbers will differ; the machinery is
-correct. First real step: run one simulation locally and confirm CC3D picks up
-`$SMORE_PARAMS` before launching the full sweep.
+recovered exactly the injected drivers, and SMoRe ParS recovered them with
+positive R². The 100-run real sweep has been executed and the results above
+come from it.
