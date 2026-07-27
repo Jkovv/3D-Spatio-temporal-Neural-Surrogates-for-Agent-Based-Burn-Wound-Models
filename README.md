@@ -10,13 +10,13 @@ SMoRe ParS parameter recovery those surrogates were built to make affordable.
 | | |
 |---|---|
 | Dense cytokine (IL-8) | DeepONet R² = 0.999, 3D U-Net R² = 0.993 - effectively a tie |
-| Sparse cytokine (IL-10) | DeepONet R² = 0.959; U-Net collapses to 0.308, and to −0.399 on the yz mid-plane |
+| Sparse cytokine (IL-10) | DeepONet R² = 0.959; U-Net collapses to 0.308, and to -0.399 on the yz mid-plane |
 | Repeatability on IL-10 | U-Net seed spread ±0.18 against DeepONet's ±0.01 |
 | Inference speed-up | U-Net ≈ 2900-3100×, DeepONet ≈ 120× per volumetric read-out |
 | Sensitivity | Two parameters carry the variance: `sigmoidb` (0.457), `keil8` (0.216) |
 | Recovery | `keil8` R² = +0.833; all four initial-population parameters negative |
-| Sensitivity ≠ identifiability | `init_ec` ranks third by Sobol yet recovers at −0.454 - a frozen-endothelium collinearity |
-| Surrogate in the loop | Field R² 0.987-0.998 across seeds, `keil8` recovery +0.191 to −0.077 |
+| Sensitivity ≠ identifiability | `init_ec` ranks third by Sobol yet recovers at -0.454 - a frozen-endothelium collinearity |
+| Surrogate in the loop | Field R² 0.987-0.998 across seeds, `keil8` recovery +0.191 to -0.077 |
 | External validation | Surface fits *E. coli* growth curves better than the ABM (median R² = 0.986); none of the nine inputs recovered |
 
 ---
