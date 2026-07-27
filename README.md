@@ -78,16 +78,3 @@ Snellius, matching the 2D benchmark so the cross-dimensional comparison is not
 confounded by hardware.
 
 ---
-
-## Data
-
-The parameter sweep, trained surrogate weights, analysis scripts, and every
-result file needed to reproduce the figures and tables are deposited on Zenodo:
-
-**[10.5281/zenodo.20700318](https://doi.org/10.5281/zenodo.20700318)**
-
-The external growth-curve dataset used for the independent validation is the
-published supplementary material of Gong and Ying (2025), reused under CC BY
-4.0. It is not redistributed here.
-
----
