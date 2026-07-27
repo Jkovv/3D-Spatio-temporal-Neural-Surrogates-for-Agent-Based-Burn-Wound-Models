@@ -1,0 +1,23 @@
+\begin{table}[h]
+\centering\footnotesize
+\caption{Sobol total-order indices computed on all 24 observables and on the 17 whose emulator reaches a cross-validated $R^2 \geq 0.5$ (Table~\ref{tab:app_emulator}). Observables the emulator cannot reproduce contribute emulator variance rather than ABM response, so the filtered column is the better-founded ranking; agreement between the two is evidence that the leading parameters do not depend on that choice.}
+\label{tab:app_sobol_filtered}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Parameter} & \textbf{All }$\mathbf{S_T}$ & \textbf{Rank} & \textbf{Filtered }$\mathbf{S_T}$ & \textbf{Rank} \\
+\midrule
+\texttt{sigmoidb} & $0.433$ & 1 & $0.451$ & 1 \\
+\texttt{keil8} & $0.222$ & 2 & $0.200$ & 2 \\
+\texttt{init\_ec} & $0.119$ & 3 & $0.129$ & 3 \\
+\texttt{init\_m} & $0.088$ & 4 & $0.000$ & 9 \\
+\texttt{km2tgf} & $0.082$ & 5 & $0.097$ & 4 \\
+\texttt{km2il10} & $0.078$ & 6 & $0.050$ & 6 \\
+\texttt{km1il6} & $0.076$ & 7 & $0.092$ & 5 \\
+\texttt{init\_n} & $0.040$ & 8 & $0.001$ & 8 \\
+\texttt{init\_f} & $0.032$ & 9 & $0.002$ & 7 \\
+\texttt{lnril8} & $0.015$ & 10 & $0.000$ & 10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% observables dropped at threshold 0.5: il1_final, il1_max, il6_final, il10_final, il10_max, tnf_final, tnf_max

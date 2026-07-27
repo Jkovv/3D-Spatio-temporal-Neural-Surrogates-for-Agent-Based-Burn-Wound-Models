@@ -1,29 +1,4 @@
 #!/usr/bin/env python3
-"""
-helpers/compute_speedup_report.py
-
-Turns the surrogate timing JSONs and the measured ABM wall-clock into the
-speed-up / break-even table for the paper (tab:cost_3d). Every number is read
-from files produced by this pipeline; nothing is carried over from the thesis.
-
-    speed-up = T_ABM / T_infer
-    N*       = T_train / (T_ABM - T_infer)
-
-T_ABM  : one 50^3 ABM run on rome  (from sweep .../abm_walltime.txt, or --t-abm)
-T_train: surrogate training time   (train_time_seconds in each res_*.json)
-T_infer: surrogate inference time  (pred_time_seconds  in each res_*.json)
-
-Training and inference are averaged over the three seeds (1/42/100), reported
-as mean +/- SD, matching the thesis convention.
-
-USAGE
------
-    python helpers/compute_speedup_report.py \
-        --models-root ../models \
-        --t-abm 4984.06
-
-(or --abm-walltime path to a sweep abm_walltime.txt to read T_ABM from it)
-"""
 
 import argparse
 import json
@@ -106,7 +81,7 @@ def main():
 
     emit("")
     emit("speed-up = T_ABM / T_infer   (compute saved per surrogate query)")
-    emit("N*       = T_train / (T_ABM - T_infer)   (runs to amortise training)")
+    emit("N* = T_train / (T_ABM - T_infer)   (runs to amortise training)")
     emit("N* < 1 means the surrogate pays for its own training within one ABM run.")
     emit("=" * 74)
 

@@ -1,0 +1,19 @@
+\begin{table}[h]
+\centering\footnotesize
+\caption{Cross-validated predictive accuracy of the per-observable Gaussian-process emulators over the 100-run sweep. $R^2$ is pooled out-of-fold (5-fold, shuffled), with the emulator refitted on each training fold, so it measures how closely the response surface on which the Sobol indices are computed tracks the ABM at parameter points the emulator did not see. Indices for observables whose emulator is weak should be read with corresponding caution.}
+\label{tab:app_emulator}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Cytokine} & \textbf{Obs.} & \textbf{mean }$\mathbf{R^2}$ & \textbf{min}--\textbf{max} \\
+\midrule
+IL-8 & 4 & $+0.984$ & $+0.967$--$+0.991$ \\
+IL-1$\beta$ & 4 & $+0.387$ & $-0.097$--$+0.604$ \\
+IL-6 & 4 & $+0.454$ & $-0.421$--$+0.852$ \\
+IL-10 & 4 & $+0.497$ & $-0.161$--$+0.864$ \\
+TNF-$\alpha$ & 4 & $+0.417$ & $-0.214$--$+0.747$ \\
+TGF-$\beta$ & 4 & $+0.800$ & $+0.574$--$+0.912$ \\
+\midrule
+\textbf{All} & 24 & $\mathbf{+0.590}$ & $-0.421$--$+0.991$ \\
+\bottomrule
+\end{tabular}
+\end{table}
