@@ -32,7 +32,7 @@ RUN="run_0062"                # benchmark run (see helpers/benchmark_run_justifi
 GRID=50
 
 # ---- paths ----------------------------------------------------------------
-BASE=/gpfs/scratch1/shared/jkowalczuk/surrogates/burns
+BASE=/gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models
 SWEEP_OUT=$BASE/sweep/outputs
 PREP=$BASE/preprocessed_3d
 MODELS=$BASE/models/deeponet_3d
