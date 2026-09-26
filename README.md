@@ -1,6 +1,6 @@
 # 3D Spatio-temporal Neural Surrogates for Agent-Based Burn-Wound Models
 
-Volumetric (50³) neural surrogates for a three-dimensional agent-based model of the post-burn immune response, together with the global sensitivity analysis and SMoRe ParS parameter recovery those surrogates were built to make affordable. 
+Volumetric neural surrogates for a three-dimensional agent-based model of the post-burn immune response, together with the global sensitivity analysis and SMoRe ParS parameter recovery those surrogates were built to make affordable. 
 
 All results come from a single 100-run Latin-hypercube sweep. The ABM has no fixed RNG seed, so the sweep, surrogates, sensitivity analysis, recovery and figures were all recomputed together on this sweep. Surrogate hyperparameters were tuned with Optuna on seed 42 and reused unchanged for seeds 1 and 100.
 
