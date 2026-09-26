@@ -1,3 +1,4 @@
+# simplified logistic fit, not the one used in smore pars. use 0.871 from predictive_consistency instead
 # Punkt 1: R^2 dopasowania powierzchni saturating-logistic do trajektorii IL-8 z NOWEGO sweepa.
 # Zastepuje stara liczbe "~87%" (sekcja External, podpis tab:external, Conclusions).
 # Uzycie: $PY scripts/check_logistic_fit.py $BASE/sweep/outputs
