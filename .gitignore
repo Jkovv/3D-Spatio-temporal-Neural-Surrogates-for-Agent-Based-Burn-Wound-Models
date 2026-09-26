@@ -21,3 +21,6 @@ scripts/__pycache__/
 sweep/
 
 figures/_unused_*
+
+__pycache__/
+*.pyc
