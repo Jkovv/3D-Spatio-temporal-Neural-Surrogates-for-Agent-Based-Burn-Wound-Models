@@ -532,7 +532,7 @@ def figS():
     fig.tight_layout(rect=[0, 0.05, 1, 1])
     savef(fig, "F1_concentrations")
 
-def figA(frame=88):
+def figA(frame=86):  # Y_target[i] = hour i+2 -> t = 88 h, as in 2D
     """xy/xz/yz mid-plane slices, IL-8 vs IL-10, ground truth."""
     fig = plt.figure(figsize=(7.6, 4.6))
     gs = fig.add_gridspec(2, 3, hspace=0.35, wspace=0.45)
@@ -665,7 +665,7 @@ def _predict_field(tf, model_name, cyt, frame, seed=42):
     return gt, pred
 
 
-def figE(frame=88):
+def figE(frame=86):  # t = 88 h, as in 2D
     """GT / Pred / |diff| slices (DeepONet) + cross-model |diff| slices."""
     tf = _load_field_deps()
     data = {}
