@@ -14,4 +14,8 @@ preprocessed_3d_infer/
 *.h5
 *.weights.h5
 
+sweep/figures/_unused_*
+scripts/__pycache__/
+*.bak
+*.bak2
 sweep/

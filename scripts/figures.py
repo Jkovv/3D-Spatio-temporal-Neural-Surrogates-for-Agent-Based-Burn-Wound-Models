@@ -71,7 +71,7 @@ LS  = {"DeepONet": "-",       "U-Net": "-"}
 
 # Calibration panels: kinetic vs initial-population, using colours from CC
 # (blue = CC[3], red = CC[0]).
-TYPE_COL = {"kinetic": CC[3], "initial": CC[0]}
+TYPE_COL = {"kinetic": CC[3], "initial": CC[0], "structural": "#2A9D8F"}
 
 # Consistent colormap for all field slices (the dark purple-to-yellow one).
 FIELD_CMAP = "magma"
@@ -359,6 +359,9 @@ PARAM_TYPE = {
 }
 
 
+PARAM_TYPE["sigmoidb"] = "structural"
+
+
 def figK1():
     """Sobol total-order ranking (horizontal bar), coloured by param type."""
     d = _load_calib()
@@ -376,7 +379,8 @@ def figK1():
     ax.set_xlabel(r"Sobol total-order index $S_T$ (mean over observables)")
     ax.set_xlim(0, max(st) * 1.18)
     handles = [Patch(fc=TYPE_COL["kinetic"], ec="black", label="kinetic"),
-               Patch(fc=TYPE_COL["initial"], ec="black", label="initial population")]
+               Patch(fc=TYPE_COL["initial"], ec="black", label="initial population"),
+               Patch(fc=TYPE_COL["structural"], ec="black", label="structural")]
     ax.legend(handles=handles, loc="lower right", fontsize=8, framealpha=0.9)
     fig.tight_layout()
     savef(fig, "F4_sobol")
@@ -454,7 +458,8 @@ def figK2():
     ax.axhspan(ax.get_ylim()[0], 0, xmin=0, xmax=1, color="#e6194b", alpha=0.05)
 
     handles = [Patch(fc=TYPE_COL["kinetic"], ec="black", label="kinetic"),
-               Patch(fc=TYPE_COL["initial"], ec="black", label="initial population")]
+               Patch(fc=TYPE_COL["initial"], ec="black", label="initial population"),
+               Patch(fc=TYPE_COL["structural"], ec="black", label="structural")]
     fig.legend(handles=handles, loc="outside lower center", ncol=2, fontsize=8)
     savef(fig, "F5_recovery")
 
@@ -498,14 +503,14 @@ def _ortho_slices(fig, gs_row, vol, cmap, label, vmax=None, show_titles=True, cb
         if show_titles:
             ax.set_title(name, fontsize=8)
         if cbar:
-            cb = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.02, format="%.0e")
+            cb = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.02, format="%.1e")
             cb.ax.tick_params(labelsize=4.5, pad=1)
             cb.ax.yaxis.get_offset_text().set_fontsize(4)
 
 def figS():
     """Six-cytokine mean trajectories, chronological split shaded."""
     raw = _raw_trajectory()
-    T = raw.shape[0]; t = np.arange(T)
+    T = raw.shape[0]; t = np.arange(T) + (101 - T)
     CC = ["#e6194b", "#f58231", "#3cb44b", "#4363d8", "#911eb4", "#42d4f4"]
     fig, axes = plt.subplots(2, 3, figsize=(7.2, 4.2))
     for i, (cyt, cl) in enumerate(CYT_ALL):
@@ -519,7 +524,7 @@ def figS():
             ax.set_xlabel("Time (h)")
         if i % 3 == 0:
             ax.set_ylabel("Mean conc.")
-        ax.set_xlim(0, T - 1)
+        ax.set_xlim(0, 100)
         ax.ticklabel_format(axis="y", style="scientific", scilimits=(-2, 2))
     handles = [Patch(fc=SPLIT_COL[s], alpha=0.3, label=s) for s in SPLIT_SPANS]
     fig.legend(handles=handles, loc="lower center", ncol=4, fontsize=7,

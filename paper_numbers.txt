@@ -1,0 +1,226 @@
+=== SURROGATES: per model x cytokine x horizon, mean +/- SD over seeds 1/42/100 ===
+deeponet_3d il8 Near_Horizon_t82_t91 Global_R2: mean=0.9981 sd=0.001043 per-seed=[0.9995, 0.9979, 0.997]
+deeponet_3d il8 Near_Horizon_t82_t91 Masked_RMSE: mean=1.886e-10 sd=1.419e-10 per-seed=[0.0, 0.0, 0.0]
+deeponet_3d il8 Near_Horizon_t82_t91 Unmasked_RMSE: mean=1.111e-10 sd=3.712e-11 per-seed=[0.0, 0.0, 0.0]
+deeponet_3d il8 Near_Horizon_t82_t91 Avg_Dice: mean=0.9705 sd=0.013 per-seed=[0.9879, 0.9667, 0.9567]
+deeponet_3d il8 Near_Horizon_t82_t91 Dice_Empty_Skipped: mean=0 sd=0 per-seed=[0, 0, 0]
+deeponet_3d il8 Near_Horizon_t82_t91 Spatial_Correlation: mean=0.9999 sd=1.41e-05 per-seed=[0.9999, 0.9999, 0.9999]
+deeponet_3d il8 Near_Horizon_t82_t91 SSIM: mean=0.9783 sd=0.01084 per-seed=[0.9931, 0.9674, 0.9745]
+deeponet_3d il8 Near_Horizon_t82_t91 SSIM_Skipped_Frames: mean=0 sd=0 per-seed=[0, 0, 0]
+deeponet_3d il8 Far_Horizon_t92_t100 Global_R2: mean=0.9936 sd=0.003306 per-seed=[0.9983, 0.9912, 0.9913]
+deeponet_3d il8 Far_Horizon_t92_t100 Masked_RMSE: mean=3.849e-10 sd=3.223e-10 per-seed=[0.0, 0.0, 0.0]
+deeponet_3d il8 Far_Horizon_t92_t100 Unmasked_RMSE: mean=2.116e-10 sd=6.84e-11 per-seed=[0.0, 0.0, 0.0]
+deeponet_3d il8 Far_Horizon_t92_t100 Avg_Dice: mean=0.9421 sd=0.02157 per-seed=[0.9725, 0.93, 0.924]
+deeponet_3d il8 Far_Horizon_t92_t100 Dice_Empty_Skipped: mean=0 sd=0 per-seed=[0, 0, 0]
+deeponet_3d il8 Far_Horizon_t92_t100 Spatial_Correlation: mean=0.9997 sd=0.0001403 per-seed=[0.9998, 0.9995, 0.9998]
+deeponet_3d il8 Far_Horizon_t92_t100 SSIM: mean=0.949 sd=0.0275 per-seed=[0.9791, 0.9126, 0.9552]
+deeponet_3d il8 Far_Horizon_t92_t100 SSIM_Skipped_Frames: mean=0 sd=0 per-seed=[0, 0, 0]
+deeponet_3d il8 train_s=[310.2, 320.42, 322.94] pred_s=[41.38, 42.77, 42.6]
+deeponet_3d il10 Near_Horizon_t82_t91 Global_R2: mean=0.8172 sd=0.1951 per-seed=[0.9624, 0.9479, 0.5414]
+deeponet_3d il10 Near_Horizon_t82_t91 Masked_RMSE: mean=5.969e-10 sd=3.898e-13 per-seed=[0.0, 0.0, 0.0]
+deeponet_3d il10 Near_Horizon_t82_t91 Unmasked_RMSE: mean=5.568e-11 sd=3.345e-11 per-seed=[0.0, 0.0, 0.0]
+deeponet_3d il10 Near_Horizon_t82_t91 Avg_Dice: mean=0.9609 sd=0.04051 per-seed=[0.9903, 0.9887, 0.9036]
+deeponet_3d il10 Near_Horizon_t82_t91 Dice_Empty_Skipped: mean=0 sd=0 per-seed=[0, 0, 0]
+deeponet_3d il10 Near_Horizon_t82_t91 Spatial_Correlation: mean=0.9773 sd=0.01525 per-seed=[0.993, 0.9822, 0.9567]
+deeponet_3d il10 Near_Horizon_t82_t91 SSIM: mean=0.8553 sd=0.1858 per-seed=[0.9963, 0.9769, 0.5928]
+deeponet_3d il10 Near_Horizon_t82_t91 SSIM_Skipped_Frames: mean=0 sd=0 per-seed=[0, 0, 0]
+deeponet_3d il10 Far_Horizon_t92_t100 Global_R2: mean=0.5114 sd=0.6308 per-seed=[0.9723, 0.9425, -0.3805]
+deeponet_3d il10 Far_Horizon_t92_t100 Masked_RMSE: mean=5.325e-10 sd=8.355e-12 per-seed=[0.0, 0.0, 0.0]
+deeponet_3d il10 Far_Horizon_t92_t100 Unmasked_RMSE: mean=8.004e-11 sd=6.97e-11 per-seed=[0.0, 0.0, 0.0]
+deeponet_3d il10 Far_Horizon_t92_t100 Avg_Dice: mean=0.802 sd=0.2679 per-seed=[0.9937, 0.9891, 0.4231]
+deeponet_3d il10 Far_Horizon_t92_t100 Dice_Empty_Skipped: mean=0 sd=0 per-seed=[0, 0, 0]
+deeponet_3d il10 Far_Horizon_t92_t100 Spatial_Correlation: mean=0.959 sd=0.03855 per-seed=[0.9926, 0.9793, 0.905]
+deeponet_3d il10 Far_Horizon_t92_t100 SSIM: mean=0.7369 sd=0.3418 per-seed=[0.9972, 0.9594, 0.2539]
+deeponet_3d il10 Far_Horizon_t92_t100 SSIM_Skipped_Frames: mean=0 sd=0 per-seed=[0, 0, 0]
+deeponet_3d il10 train_s=[529.28, 256.09, 232.78] pred_s=[40.31, 41.13, 41.17]
+
+unet_3d il8 Near_Horizon_t82_t91 Global_R2: mean=0.9894 sd=0.004637 per-seed=[0.9951, 0.9894, 0.9838]
+unet_3d il8 Near_Horizon_t82_t91 Masked_RMSE: mean=5.299e-10 sd=2.173e-10 per-seed=[0.0, 0.0, 0.0]
+unet_3d il8 Near_Horizon_t82_t91 Unmasked_RMSE: mean=2.702e-10 sd=6.376e-11 per-seed=[0.0, 0.0, 0.0]
+unet_3d il8 Near_Horizon_t82_t91 Avg_Dice: mean=0.9724 sd=0.006529 per-seed=[0.9802, 0.9726, 0.9642]
+unet_3d il8 Near_Horizon_t82_t91 Dice_Empty_Skipped: mean=0 sd=0 per-seed=[0, 0, 0]
+unet_3d il8 Near_Horizon_t82_t91 Spatial_Correlation: mean=0.9959 sd=0.001616 per-seed=[0.9978, 0.9961, 0.9938]
+unet_3d il8 Near_Horizon_t82_t91 SSIM: mean=0.9854 sd=0.00808 per-seed=[0.9937, 0.988, 0.9745]
+unet_3d il8 Near_Horizon_t82_t91 SSIM_Skipped_Frames: mean=0 sd=0 per-seed=[0, 0, 0]
+unet_3d il8 Far_Horizon_t92_t100 Global_R2: mean=0.9873 sd=0.005704 per-seed=[0.9944, 0.987, 0.9804]
+unet_3d il8 Far_Horizon_t92_t100 Masked_RMSE: mean=5.63e-10 sd=2.438e-10 per-seed=[0.0, 0.0, 0.0]
+unet_3d il8 Far_Horizon_t92_t100 Unmasked_RMSE: mean=3.053e-10 sd=7.435e-11 per-seed=[0.0, 0.0, 0.0]
+unet_3d il8 Far_Horizon_t92_t100 Avg_Dice: mean=0.9739 sd=0.00565 per-seed=[0.9809, 0.9737, 0.967]
+unet_3d il8 Far_Horizon_t92_t100 Dice_Empty_Skipped: mean=0 sd=0 per-seed=[0, 0, 0]
+unet_3d il8 Far_Horizon_t92_t100 Spatial_Correlation: mean=0.9952 sd=0.001952 per-seed=[0.9974, 0.9954, 0.9927]
+unet_3d il8 Far_Horizon_t92_t100 SSIM: mean=0.9841 sd=0.00837 per-seed=[0.993, 0.9864, 0.9729]
+unet_3d il8 Far_Horizon_t92_t100 SSIM_Skipped_Frames: mean=0 sd=0 per-seed=[0, 0, 0]
+unet_3d il8 train_s=[81.85, 97.71, 64.3] pred_s=[1.47, 1.2, 1.46]
+unet_3d il10 Near_Horizon_t82_t91 Global_R2: mean=0.6026 sd=0.1367 per-seed=[0.5353, 0.4794, 0.7932]
+unet_3d il10 Near_Horizon_t82_t91 Masked_RMSE: mean=6.001e-10 sd=2.673e-12 per-seed=[0.0, 0.0, 0.0]
+unet_3d il10 Near_Horizon_t82_t91 Unmasked_RMSE: mean=9.409e-11 sd=1.785e-11 per-seed=[0.0, 0.0, 0.0]
+unet_3d il10 Near_Horizon_t82_t91 Avg_Dice: mean=0.4735 sd=0.1337 per-seed=[0.5548, 0.285, 0.5808]
+unet_3d il10 Near_Horizon_t82_t91 Dice_Empty_Skipped: mean=0 sd=0 per-seed=[0, 0, 0]
+unet_3d il10 Near_Horizon_t82_t91 Spatial_Correlation: mean=0.7796 sd=0.08333 per-seed=[0.7423, 0.7014, 0.8951]
+unet_3d il10 Near_Horizon_t82_t91 SSIM: mean=0.9418 sd=0.02955 per-seed=[0.9424, 0.9053, 0.9777]
+unet_3d il10 Near_Horizon_t82_t91 SSIM_Skipped_Frames: mean=0 sd=0 per-seed=[0, 0, 0]
+unet_3d il10 Far_Horizon_t92_t100 Global_R2: mean=0.5241 sd=0.1609 per-seed=[0.4343, 0.388, 0.7501]
+unet_3d il10 Far_Horizon_t92_t100 Masked_RMSE: mean=5.318e-10 sd=3.411e-12 per-seed=[0.0, 0.0, 0.0]
+unet_3d il10 Far_Horizon_t92_t100 Unmasked_RMSE: mean=1.03e-10 sd=1.923e-11 per-seed=[0.0, 0.0, 0.0]
+unet_3d il10 Far_Horizon_t92_t100 Avg_Dice: mean=0.4229 sd=0.1224 per-seed=[0.5095, 0.2498, 0.5095]
+unet_3d il10 Far_Horizon_t92_t100 Dice_Empty_Skipped: mean=0 sd=0 per-seed=[0, 0, 0]
+unet_3d il10 Far_Horizon_t92_t100 Spatial_Correlation: mean=0.7249 sd=0.1051 per-seed=[0.6718, 0.6311, 0.8717]
+unet_3d il10 Far_Horizon_t92_t100 SSIM: mean=0.9241 sd=0.0369 per-seed=[0.9218, 0.8801, 0.9704]
+unet_3d il10 Far_Horizon_t92_t100 SSIM_Skipped_Frames: mean=0 sd=0 per-seed=[0, 0, 0]
+unet_3d il10 train_s=[110.12, 121.67, 155.0] pred_s=[1.5, 1.24, 1.5]
+
+=== SOBOL + RECOVERY (topk10) ===
+ST sigmoidb: 0.4452
+ST keil8: 0.1721
+ST init_ec: 0.1396
+ST km2il10: 0.1345
+ST km1il6: 0.1113
+ST km2tgf: 0.0843
+ST lnril8: 0.0781
+ST init_n: 0.0431
+ST init_f: 0.0090
+ST init_m: 0.0015
+recovery sigmoidb: R2=0.5116 nRMSE=0.2018
+recovery keil8: R2=0.8711 nRMSE=0.1036
+recovery init_ec: R2=-0.1224 nRMSE=0.3058
+recovery km2il10: R2=0.3129 nRMSE=0.2391
+recovery km1il6: R2=0.2690 nRMSE=0.2468
+recovery km2tgf: R2=0.3395 nRMSE=0.2347
+recovery lnril8: R2=-0.9013 nRMSE=0.3981
+recovery init_n: R2=-0.8270 nRMSE=0.3892
+recovery init_f: R2=-1.3720 nRMSE=0.4534
+recovery init_m: R2=-0.9722 nRMSE=0.4052
+nrmse_mean: 0.2977
+calibration_results_topk5_sobol.json: params=['sigmoidb', 'keil8', 'init_ec', 'km1il6', 'km2il10'] nrmse_mean=0.2453
+calibration_results_topk5_identifiable.json: params=['sigmoidb', 'keil8', 'km1il6', 'km2il10', 'km2tgf'] nrmse_mean=0.2181
+
+=== LOOP ===
+seed 1: field=0.9936+/-0.0086 clip=0.0152 | surrogate {'keil8': 0.33089873256415014, 'init_ec': 0.4098565523971507, 'sigmoidb': -1.157453112683473, 'init_m': -1.6101503732822509, 'km1il6': -1.1024065986002731} | abm {'keil8': 0.8097474519889799, 'init_ec': -0.6938134453316784, 'sigmoidb': -0.3509195551463127, 'init_m': -1.3963181415111237, 'km1il6': -1.185701797601657}
+seed 42: field=0.9901+/-0.0115 clip=0.0152 | surrogate {'keil8': 0.20973826634448567, 'init_ec': 0.3269521208221853, 'sigmoidb': -1.1129589562446682, 'init_m': -1.7237851482057485, 'km1il6': -0.9979529990662828} | abm {'keil8': 0.8097475001438982, 'init_ec': -0.6938127157435441, 'sigmoidb': -0.35091167527007694, 'init_m': -1.3962786114253127, 'km1il6': -1.1856990034885824}
+seed 100: field=0.9732+/-0.0254 clip=0.0152 | surrogate {'keil8': 0.1795966454343818, 'init_ec': 0.39589172507245174, 'sigmoidb': -1.1142245577564296, 'init_m': -1.6579982895285412, 'km1il6': -0.9251176482938961} | abm {'keil8': 0.809530226146689, 'init_ec': -0.6935057371916356, 'sigmoidb': -0.3508982373627181, 'init_m': -1.3966734091523785, 'km1il6': -1.1858335871571684}
+
+=== RIDGE ===
+{
+ "observable": "il8_final",
+ "n_train": 100,
+ "emulator_cv_r2_mean": 0.9866990334528609,
+ "emulator_cv_r2_std": 0.004812356127726907,
+ "corr_obs_product": 0.9411859374532947,
+ "corr_obs_init_ec": 0.5680345292222841,
+ "corr_obs_keil8": 0.8167573121593964,
+ "along_ridge_std": 1.3440191871779617e-09,
+ "total_std": 6.531595492485072e-09,
+ "flatness_ratio": 0.20577195705464663
+}
+
+=== identifiability_report.txt ===
+======================================================================
+IDENTIFIABILITY ANALYSIS - sensitivity is not identifiability
+======================================================================
+source: /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models/smores/results/calibration_results_topk10.json
+non-identifiable threshold: recovery R2 < 0.0
+
+rank       param   Sobol_ST  recovery_R2    nRMSE                       verdict
+------------------------------------------------------------------------------
+   1    sigmoidb      0.445       +0.512    0.202      sensitive & identifiable
+   2       keil8      0.172       +0.871    0.104      sensitive & identifiable
+   3     init_ec      0.140       -0.122    0.306  SENSITIVE but NOT identifiable
+   4     km2il10      0.135       +0.313    0.239      sensitive & identifiable
+   5      km1il6      0.111       +0.269    0.247      sensitive & identifiable
+   6      km2tgf      0.084       +0.340    0.235         weak but identifiable
+   7      lnril8      0.078       -0.901    0.398  neither (correctly filtered)
+   8      init_n      0.043       -0.827    0.389  neither (correctly filtered)
+   9      init_f      0.009       -1.372    0.453  neither (correctly filtered)
+  10      init_m      0.002       -0.972    0.405  neither (correctly filtered)
+
+KEY FINDING:
+  * init_ec: high Sobol ST (influences observables) but recovery R2=-0.122 (< 0.0).
+    -> A high total-order index does NOT guarantee identifiability.
+    -> Sensitivity ranks influence; recovery tests invertibility.
+
+======================================================================
+EFFECT OF THE FILTER: top-5-by-Sobol  vs  5-identifiable
+======================================================================
+  top-5 by Sobol      : ['sigmoidb', 'keil8', 'init_ec', 'km1il6', 'km2il10']
+    mean nRMSE        = 0.245
+  5 identifiable      : ['sigmoidb', 'keil8', 'km1il6', 'km2il10', 'km2tgf']
+    mean nRMSE        = 0.218
+
+  swapping the non-identifiable init_ec for km2tgf lowers mean
+  nRMSE by 0.027 (11% relative improvement).
+  -> Filtering on identifiability, not sensitivity alone, gives the
+     better-constrained calibration.
+
+======================================================================
+
+=== speedup_report.txt ===
+==========================================================================
+SURROGATE SPEED-UP / BREAK-EVEN  (tab:cost_3d)
+==========================================================================
+T_ABM = 4984 s  (one 50^3 ABM run, rome/CPU)
+training + inference averaged over seeds 1/42/100 (mean +/- SD)
+
+model     cyt    n      T_train (s)     T_infer (s)  speed-up      N*
+----------------------------------------------------------------------
+DeepONet  il10   3    339.4 +/- 134.6    40.87 +/- 0.40       122x   0.07
+DeepONet  il8    3    317.9 +/-  5.5    42.25 +/- 0.62       118x   0.06
+U-Net     il10   3    128.9 +/- 19.0     1.41 +/- 0.12      3526x   0.03
+U-Net     il8    3     81.3 +/- 13.6     1.38 +/- 0.12      3620x   0.02
+
+speed-up = T_ABM / T_infer   (compute saved per surrogate query)
+N* = T_train / (T_ABM - T_infer)   (runs to amortise training)
+N* < 1 means the surrogate pays for its own training within one ABM run.
+==========================================================================
+
+=== sobol_convergence_report.txt ===
+========================================================================
+SOBOL CONVERGENCE  (are 100 runs enough?)
+========================================================================
+sub-samples: [60, 70, 80, 90, 100]   n_saltelli=512
+tracking top-5 parameters at full N=100: ['sigmoidb', 'init_ec', 'keil8', 'km2tgf', 'km1il6']
+
+param      N=60      N=70      N=80      N=90      N=100     
+-------------------------------------------------------------
+sigmoidb   0.383     0.399     0.434     0.445     0.393     
+init_ec    0.148     0.173     0.183     0.148     0.178     
+keil8      0.167     0.173     0.158     0.178     0.169     
+km2tgf     0.128     0.101     0.118     0.131     0.100     
+km1il6     0.086     0.078     0.107     0.083     0.097     
+
+Ranking stability (top-5 set overlap with full N):
+  N= 60: 4/5 same set
+  N= 70: 4/5 same set
+  N= 80: identical order
+  N= 90: 4/5 same set
+  N=100: identical order
+
+Max |ST(N=100) - ST(N=90)| over top-5: 0.052
+  -> still moving; consider more runs.
+========================================================================
+
+=== emulator_cv.csv ===
+observable,r2_5fold
+il8_final,0.989624
+il8_mean,0.989256
+il8_max,0.960675
+il8_auc,0.989209
+il1_final,-0.513495
+il1_mean,0.773993
+il1_max,0.539291
+il1_auc,0.766814
+il6_final,-0.216713
+il6_mean,0.888155
+il6_max,0.525980
+il6_auc,0.887134
+il10_final,-0.302106
+il10_mean,0.865011
+il10_max,0.362225
+il10_auc,0.856553
+tnf_final,-0.530202
+tnf_mean,0.812944
+tnf_max,0.562733
+tnf_auc,0.815341
+tgf_final,0.602545
+tgf_mean,0.875021
+tgf_max,0.706700
+tgf_auc,0.874496

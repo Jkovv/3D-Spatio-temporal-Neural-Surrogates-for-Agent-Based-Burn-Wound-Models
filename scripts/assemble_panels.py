@@ -20,7 +20,7 @@ LAYOUTS = {
     },
     # Fig 2 = architectures, drawn by hand. This reserves a blank, correctly-
     # sized page so numbering and layout stay consistent with the rest.
-    "fig2_architectures": {
+    "_unused_fig2_placeholder": {
         "orient": "col",
         "sources": [],           # no source PNGs; emits a labelled blank panel
         "width": 8.0,

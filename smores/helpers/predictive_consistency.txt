@@ -1,0 +1,34 @@
+[1/4] loading calibration results from /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models/smores/results/calibration_surrogate_il8.json
+      surrogate observables: 5 params, 100 runs
+      ABM observables: 5 params, 100 runs
+[2/4] loading trajectories (il8, volume-averaged) ...
+      100 runs, 99 frames
+[3/4] fitting stage-A surfaces and reference levels ...
+      surface-fit ceiling: R2 = +0.871 +/- 0.002 (median +0.871)
+      this is the best any recovery could do; it is the cost of the logistic form
+      forward-map baseline: R2 = +0.871 +/- 0.004 (median +0.871)
+      surfaces predicted from the TRUE theta; isolates GP mapping error
+
+[4/4] trajectories implied by recovered parameters ...
+
+  [surrogate observables]
+      trajectory R2 : +0.870 +/- 0.006  (median +0.871, 0% above 0.9)
+      parameter  R2 : keil8=+0.210, init_ec=+0.327, sigmoidb=-1.113, init_m=-1.724, km1il6=-0.998
+
+  [ABM observables]
+      trajectory R2 : +0.723 +/- 0.201  (median +0.812, 0% above 0.9)
+      parameter  R2 : keil8=+0.810, init_ec=-0.694, sigmoidb=-0.351, init_m=-1.396, km1il6=-1.186
+
+DONE -> /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models/smores/results/predictive_consistency.json
+
+=== IDENTIFIABILITY VERSUS PREDICTION ===
+  surface-fit ceiling   : +0.871
+  forward-map baseline  : +0.871
+  surrogate observables  trajectory +0.870   best parameter +0.327
+  ABM observables        trajectory +0.723   best parameter +0.810
+
+  If trajectory R2 stays close to the ceiling while parameter R2 is
+  low, the calibration is non-identifiable but predictive: the
+  observables cannot separate parameter sets that imply the same
+  dynamics. If both are low, the calibration itself has failed.
+log -> predictive_consistency.txt
