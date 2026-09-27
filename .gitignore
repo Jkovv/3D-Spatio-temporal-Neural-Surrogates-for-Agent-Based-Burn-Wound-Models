@@ -24,3 +24,11 @@ figures/_unused_*
 
 __pycache__/
 *.pyc
+
+backup_v1/
+models/extra_seeds_diagnostic/
+smores/results/il10_10seeds.*
+
+backup_v1/
+models/extra_seeds_diagnostic/
+smores/results/il10_10seeds.*

@@ -112,6 +112,10 @@ def fit_cmax_per_cytokine(train_cyto: np.ndarray
     qs: List[Optional[float]] = []
     for c in range(6):
         col = floored[:, c]
+        # kurtosis and percentile on ACTIVE voxels only: the zeros are created
+        # by the noise floor, not by the field, and would otherwise push the
+        # percentile to zero for sparse 3D fields
+        col = col[col > 0] if np.any(col > 0) else col
         # excess kurtosis (Fisher), unbiased - on the floored distribution
         kappa = float(scipy_kurtosis(col, fisher=True, bias=False))
         q = clip_percentile_from_kurtosis(kappa)
