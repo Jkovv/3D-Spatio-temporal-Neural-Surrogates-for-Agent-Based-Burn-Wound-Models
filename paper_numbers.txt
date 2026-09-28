@@ -103,14 +103,14 @@ seed 100: field=0.9623+/-0.0708 clip=0.0110 | surrogate {'keil8': -0.06587075778
 {
  "observable": "il8_final",
  "n_train": 100,
- "emulator_cv_r2_mean": 0.9866990334528609,
- "emulator_cv_r2_std": 0.004812356127726907,
- "corr_obs_product": 0.9411859374532947,
- "corr_obs_init_ec": 0.5680345292222841,
- "corr_obs_keil8": 0.8167573121593964,
- "along_ridge_std": 1.3440191871779617e-09,
- "total_std": 6.531595492485072e-09,
- "flatness_ratio": 0.20577195705464663
+ "emulator_cv_r2_mean": 0.9866989518662301,
+ "emulator_cv_r2_std": 0.004812231024709637,
+ "corr_obs_product": 0.9835562619147602,
+ "corr_obs_init_ec": 0.5680345292220758,
+ "corr_obs_keil8": 0.816757312168578,
+ "along_ridge_std": 1.1866451556287154e-09,
+ "total_std": 6.531595492422426e-09,
+ "flatness_ratio": 0.18167768610370796
 }
 
 === identifiability_report.txt ===
@@ -164,7 +164,7 @@ model     cyt    n      T_train (s)     T_infer (s)  speed-up      N*
 ----------------------------------------------------------------------
 DeepONet  il10   3    468.7 +/- 108.1    41.56 +/- 0.26       120x   0.09
 DeepONet  il8    3    574.0 +/- 215.4    42.01 +/- 0.68       119x   0.12
-U-Net     il10  10    114.7 +/- 23.9     1.50 +/- 0.03      3323x   0.02
+U-Net     il10   3    122.6 +/- 20.0     1.48 +/- 0.05      3375x   0.02
 U-Net     il8    3     72.2 +/- 11.1     1.62 +/- 0.10      3083x   0.01
 
 speed-up = T_ABM / T_infer   (compute saved per surrogate query)

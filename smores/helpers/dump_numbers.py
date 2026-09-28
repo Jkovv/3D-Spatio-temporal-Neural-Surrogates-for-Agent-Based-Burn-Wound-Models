@@ -49,7 +49,7 @@ for s, f in {"1": "calibration_surrogate_il8_seed1.json", "42": "calibration_sur
 p()
 
 p("=== RIDGE ===")
-p(json.dumps(json.load(open(f"{R}/ridge_init_ec_keil8.json")), indent=1))
+p(json.dumps(json.load(open(f"{R}/ridge_init_ec_keil8_raw.json")), indent=1))
 p()
 for f in [f"{B}/smores/helpers/identifiability_report.txt", f"{B}/smores/helpers/speedup_report.txt",
           f"{B}/smores/helpers/sobol_convergence_report.txt", f"{R}/emulator_cv.csv"]:
