@@ -18,7 +18,7 @@ All results come from a single 100-run Latin-hypercube sweep. The ABM has no fix
 | Sensitivity ≠ identifiability | `init_ec` ranks third by Sobol yet recovers at -0.122; final IL-8 tracks the product `init_ec` × `keil8` (\|r\| = 0.984), a frozen-endothelium ridge |
 | Recovery target choice | Swapping `init_ec` for `km2tgf` in the top 5 lowers mean nRMSE by 11% |
 | Surrogate in the loop | Field R² 0.93-0.98 across seeds, `keil8` recovery -0.07 to +0.12 against +0.81 from the ABM's own IL-8 observables |
-| External stress test | Surface fits *E. coli* growth curves better than the ABM (median R² = 0.986); none of the top inputs recovered |
+| External stress test | Surface fits 870 *E. coli* growth curves better than the ABM (median R² = 0.986); none of the top inputs recovered (leave-one-out on a random 500-curve subsample) |
 
 ---
 
@@ -40,21 +40,19 @@ All results come from a single 100-run Latin-hypercube sweep. The ABM has no fix
 **`scripts/`** holds the preprocessing from the 2D benchmark - the kurtosis-adaptive percentile-clipping normalisation, the two-frame look-back, and the chronological 70/10/19 split - adapted to 3D by removing a numerical-diffusion noise floor and computing the kurtosis and clip percentile over the voxels above it. It also holds the evaluation metrics (global R², masked RMSE, Dice, volumetric SSIM, Fisher-z-pooled spatial correlation) and the orthogonal mid-plane metrics added for the 3D setting (`midplane_r2.py`). 
 `figures.py`, `fig_seeddots.py` and `assemble_panels.py` rebuild all figures (`rebuild_figures.slurm`).
 
-**`figures/`** maps one-to-one onto the manuscript:
+**`figures/`** holds one file per manuscript figure. File numbers follow the order in which the figures were made, not their numbering in the paper:
 
 | File | Content |
 |---|---|
 | `fig1_data.png` | Cytokine trajectories and the dense/sparse contrast (slices at t = 88 h) |
 | `fig2_architectures.png` | The two benchmarked architectures |
 | `fig3_accuracy.png` | Volumetric accuracy and metrics, per seed |
-| `fig4_midplane.png` | Mid-plane reconstruction at t = 88 h and per-plane R² |
+| `fig4_midplane.png` | Mid-plane reconstruction at t = 88 h and per-plane R² (appendix figure) |
 | `fig5_cost.png` | Inference speed-up over one ABM trajectory |
 | `fig6_sobol.png` | Sobol total-order indices, ranked |
 | `fig7_recovery.png` | Recovery, and sensitivity against identifiability |
 
-**`smores/`** is the calibration pipeline: the 100-run Latin-hypercube sweep,
-the emulator-based Sobol screen, the SMoRe ParS recovery, the surrogate-in-the-loop
-experiment, and the `init_ec` × `keil8` ridge analysis (`smores/helpers/ridge_raw.py`).
+**`smores/`** is the calibration pipeline: the 100-run Latin-hypercube sweep, the emulator-based Sobol screen, the SMoRe ParS recovery, the surrogate-in-the-loop experiment, and the `init_ec` × `keil8` ridge analysis (`smores/helpers/ridge_raw.py`).
 
 ---
 
@@ -69,9 +67,7 @@ python smore/run_calibration.py --sim-root sweep/outputs \
     --manifest manifest.json --top-k 5 --out calibration_results.json
 ```
 
-See `smores/README.md` for the sweep, the emulator audit, and the filtered
-Sobol ranking, and `models/` for surrogate training.
-
+See `smores/README.md` for the sweep, the emulator audit, and the filtered Sobol ranking, and `models/` for surrogate training.
 Surrogate results in the paper were produced on a single NVIDIA A100 on Snellius.
 
 ---
