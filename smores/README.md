@@ -12,7 +12,7 @@ smores/
 │   ├── run_calibration_surrogate.py   # same, with surrogate-predicted observables
 │   ├── compare_observables.py
 │   └── spatial_observables.py
-├── helpers/ # helper files for experiments mentioned in the manusctipt
+├── helpers/                   # helper scripts for the experiments reported in the manuscript
 │   ...
 └── sweep/
     └── outputs/run_0001 … run_0100/
@@ -23,22 +23,15 @@ smores/
       ...
 ```
 
-`manifest.json` carries `param_names`, `bounds` (per parameter `low`/`high`
-plus a description), `baselines`, and the per-run vectors under `runs`.
-`params.json` in each run directory nests the vector under a `params` key and
-is the pairing key between θ and trajectory.
+`manifest.json` carries `param_names`, `bounds` (per parameter `low`/`high` plus a description), `baselines`, and the per-run vectors under `runs`. `params.json` in each run directory nests the vector under a `params` key and is the pairing key between θ and trajectory.
 
 ---
 
 ## Parameter injection
 
-Per-run-directory staging, matching the original sweep's structure and safer
-than an environment variable, since it does not depend on CC3D passing the
-environment through to the steppable process.
+Per-run-directory staging, matching the original sweep's structure and safer than an environment variable, since it does not depend on CC3D passing the environment through to the steppable process.
 
-`run_sweep.py` stages `sweep/runs/<run_id>/Simulation/` with a full copy of the
-code plus a validated `params.json`; `param_loader.py` reads that local file
-(or `$SMORE_PARAMS` if set); CC3D writes to `sweep/outputs/<run_id>/`, outside
+`run_sweep.py` stages `sweep/runs/<run_id>/Simulation/` with a full copy of the code plus a validated `params.json`; `param_loader.py` reads that local file (or `$SMORE_PARAMS` if set); CC3D writes to `sweep/outputs/<run_id>/`, outside
 the run directory as CC3D requires, and `params.json` is copied there.
 
 CC3D is launched with:
@@ -80,69 +73,32 @@ python helpers/emulator_cv.py --sim-root sweep/outputs --manifest manifest.json 
 python helpers/compare_sobol.py --sim-root sweep/outputs --manifest manifest.json \
     --cv-csv results/emulator_cv.csv --threshold 0.5 \
     --out-tex results/appendix_sobol_filtered.tex
+
+# response surface of the init_ec x keil8 ridge (final IL-8, raw product)
+python helpers/ridge_raw.py
 ```
 
-`emulator_cv.py` and `compare_sobol.py` import `smore/observables.py` and
-`smore/sensitivity.py` rather than reimplementing anything, so the emulator
-they score is the emulator the indices stand on. Run `emulator_cv.py` before
-`compare_sobol.py` - the second consumes the first's CSV.
+`emulator_cv.py` and `compare_sobol.py` import `smore/observables.py` and `smore/sensitivity.py` rather than reimplementing anything, so the emulator they score is the emulator the indices stand on. Run `emulator_cv.py` before `compare_sobol.py` - the second consumes the first's CSV.
 
-Note that `compare_sobol.py` takes `--n-saltelli` (default 1024). Pass the same
-base sample the production `sensitivity.py` run used, otherwise its "All"
-column will not reproduce the main Sobol table.
+Note that `compare_sobol.py` takes `--n-saltelli` (default 1024). Pass the same base sample the production `sensitivity.py` run used, otherwise its "All" column will not reproduce the main Sobol table.
 
 ---
 
 ## Method notes
 
-**Sampling.** Latin hypercube via `scipy.stats.qmc.LatinHypercube`,
-deterministic under a fixed seed and independent of SALib, so the Sobol step
-shares no RNG state with sweep generation.
+**Sampling.** Latin hypercube via `scipy.stats.qmc.LatinHypercube`, deterministic under a fixed seed and independent of SALib, so the Sobol step shares no RNG state with sweep generation.
 
-**Sensitivity.** A Gaussian process is fitted per observable on the 100 real
-runs and Sobol indices are computed on a dense Saltelli sample of that
-emulator; a direct Saltelli design on the ABM would need thousands of 50³
-trajectories. `sensitivity._fit_gp` standardises θ and y internally and returns
-`(predict, gp)`.
+**Sensitivity.** A Gaussian process is fitted per observable on the 100 real runs and Sobol indices are computed on a dense Saltelli sample of that emulator; a direct Saltelli design on the ABM would need thousands of 50³ trajectories. `sensitivity._fit_gp` standardises θ and y internally and returns `(predict, gp)`.
 
-**Emulator quality is not uniform, and this bounds the ranking.** Cross-
-validating the 24 emulators (`helpers/emulator_cv.py`, pooled out-of-fold R²,
-5-fold, refitted per fold) gives a mean of 0.590 with a range from -0.421 to
-+0.991. The variation is structured along two axes at once. By cytokine: IL-8
-reaches 0.984 while IL-1β reaches 0.387, the same dense-versus-sparse ordering
-the neural surrogate shows on voxel fields. By observable type: the
-integrating quantities are emulated well (mean 0.821, AUC 0.826) and the
-pointwise ones are not (final 0.111, max 0.601), with five of six final-value
-observables at or below zero. A single time point of a stochastic model, or an
-extremum over one, is dominated by realisation noise; averaging over 101 time
-points cancels it. Seventeen of 24 pass R² ≥ 0.5.
+**Emulator quality is not uniform, and this bounds the ranking.** Cross-validating the 24 emulators (`helpers/emulator_cv.py`, pooled out-of-fold R², 5-fold, refitted per fold) gives a mean of 0.587 with a range from -0.530 to +0.990. The variation is structured along two axes at once. By cytokine: IL-8 reaches 0.982 while IL-1β reaches 0.392, the same dense-versus-sparse ordering the neural surrogate shows on voxel fields. By observable type: the integrating quantities are emulated well (time-average 0.867, AUC 0.865) and the pointwise ones are not (final 0.005, max 0.610), with four of six final-value observables below zero. A single time point of a stochastic model, or an extremum over one, is dominated by realisation noise; averaging over 101 time points cancels it. Nineteen of 24 pass R² ≥ 0.5.
 
-**Which indices are quantitative.** Recomputing the ranking on those 17
-(`helpers/compare_sobol.py`) leaves the three leaders unmoved - `sigmoidb`,
-`keil8`, `init_ec` - while `init_m`, `init_n`, `init_f` and `lnril8` collapse to
-within 0.002 of zero. Their apparent influence was carried by observables the
-emulator was not reproducing, which is also why `init_m`'s index failed to
-settle under subsampling. Treat only the three leaders as quantitative.
+**Which indices are quantitative.** `helpers/compare_sobol.py` recomputes the ranking on the observables that pass the emulator threshold, as a check on how much of each index rests on poorly emulated observables. Under subsampling of the 100 runs, only the leading index (`sigmoidb`, S_T = 0.445) keeps its rank; `keil8`, `init_ec` and `km2il10` (0.13-0.17) stay within the subsampling spread without a stable order. Treat only the leading index as quantitative and the rest as a screen.
 
-**Calibration scope.** SMoRe ParS recovers only the top-k from the Sobol
-ranking. Parameters that do not move the observable are not identifiable, and
-calibrating them injects an unconstrained direction that depresses recovery for
-everything else. This follows Jain 2022 (few parameters) -> Bergman 2024
-(higher-dimensional).
+**Calibration scope.** SMoRe ParS recovers only the top-k from the Sobol ranking. Parameters that do not move the observable are not identifiable, and calibrating them injects an unconstrained direction that depresses recovery for everything else. This follows Jain 2022 (few parameters) -> Bergman 2024 (higher-dimensional).
 
-**Observable.** Per-cytokine volume-averaged concentration time series from
-`datafiles/mean_concentration.txt`, reduced to `[final, mean, max, AUC]` per
-cytokine - 24 scalars. Defined once in `smore/observables.py`
-(`summarize_observable`, `FEATURE_NAMES`); do not redefine them anywhere else.
+**Observable.** Per-cytokine volume-averaged concentration time series from `datafiles/mean_concentration.txt`, reduced to `[final, mean, max, AUC]` per cytokine - 24 scalars. Defined once in `smore/observables.py` (`summarize_observable`, `FEATURE_NAMES`); do not redefine them anywhere else.
 
-**Endothelium is frozen.** `init_ec` affects IL-8 only through the number of
-constitutive sources, so it is collinear with `keil8`: multiplying one and
-dividing the other by the same factor leaves the trajectory essentially
-unchanged. It is therefore sensitive (S_T = 0.109, third of ten, and third
-again on the filtered ranking) but not recoverable (R² = -0.454). This is a
-property of the ABM configuration inherited from Korkmaz et al., not of the
-calibration method. It is the single case in the sweep where influence and
-invertibility come apart.
+**Endothelium is frozen.** `init_ec` affects IL-8 only through the number of constitutive sources, so it is collinear with `keil8`: multiplying one and dividing the other by the same factor leaves the trajectory essentially unchanged. It is therefore sensitive (S_T = 0.140, third of ten) but not recoverable (R² = -0.122). `helpers/ridge_raw.py` confirms the ridge on a GP emulator of final IL-8 (cross-validated R² 0.987): the observable correlates with the product `init_ec` × `keil8` at |r| = 0.984, against 0.568 and 0.817 for the two factors separately, and its variation along curves of constant product is 0.18 of its total variation. This is a property of the ABM configuration inherited from Korkmaz et al., not of the calibration method.
 
 ---
 
@@ -150,21 +106,19 @@ invertibility come apart.
 
 | Stage | Outcome |
 |---|---|
-| Sobol, all 24 observables | `sigmoidb` 0.457, `keil8` 0.216 lead; `init_ec` third at 0.109 |
-| Sobol, 17 well-emulated | Same three leaders; `init_*` and `lnril8` collapse to ≈0 |
-| Recovery (leave-one-out) | `keil8` +0.833, `km2il10` +0.481, `sigmoidb` +0.439, `km1il6` +0.374 |
-| Recovery, non-identifiable | All four `init_*` negative; `init_ec` -0.454 despite rank 3 |
-| Surrogate in the loop | Field R² 0.987-0.998 across seeds, `keil8` recovery +0.191 to -0.077 |
-| External validation (*E. coli*) | Surface fits better than on the ABM (median 0.986); no input recovered |
+| Sobol, all 24 observables | `sigmoidb` 0.445 clearly first; `keil8` 0.172, `init_ec` 0.140, `km2il10` 0.135 without a stable order |
+| Recovery (leave-one-out) | `keil8` +0.871, `sigmoidb` +0.512, `km2tgf` +0.340, `km2il10` +0.313, `km1il6` +0.269 |
+| Recovery, non-identifiable | All four `init_*` negative; `init_ec` -0.122 despite rank 3 |
+| Recovery target choice | Swapping `init_ec` for `km2tgf` in the top 5 lowers mean nRMSE from 0.245 to 0.218 (-11%) |
+| Ridge | Final IL-8 tracks `init_ec` × `keil8` at \|r\| = 0.984 (flatness 0.18) |
+| Surrogate in the loop | Field R² 0.93-0.98 across seeds, `keil8` recovery -0.07 to +0.12, against +0.81 from the ABM's own IL-8 observables |
+| External validation (*E. coli*) | Surface fits the 870 curves better than the ABM (median 0.986); no input recovered (leave-one-out on a random 500-curve subsample) |
 
-The surrogate-in-the-loop row is the one worth internalising before reusing this code: field accuracy and parameter recoverability do not move together, and the seed with the most accurate fields recovered the parameter least well.
+The surrogate-in-the-loop row is the one worth internalising before reusing this code: the surrogate reproduces the trajectories almost perfectly, yet the parameter is recovered far worse than from the ABM, and field accuracy and recovery do not rank the seeds in the same order.
 A surrogate intended for calibration has to be validated on a recovery task, not only on a field-accuracy metric, and across seeds rather than at one.
 
 ---
 
 ## Status
 
-Validated end-to-end on a synthetic sweep with known θ-dependence: Sobol
-recovered exactly the injected drivers, and SMoRe ParS recovered them with
-positive R². The 100-run real sweep has been executed and the results above
-come from it.
+Validated end-to-end on a synthetic sweep with known θ-dependence: Sobol recovered exactly the injected drivers, and SMoRe ParS recovered them with positive R². The 100-run real sweep has been executed and the results above come from it.
