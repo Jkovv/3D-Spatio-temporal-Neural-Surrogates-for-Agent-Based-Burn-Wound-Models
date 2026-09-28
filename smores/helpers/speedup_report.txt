@@ -8,7 +8,7 @@ model     cyt    n      T_train (s)     T_infer (s)  speed-up      N*
 ----------------------------------------------------------------------
 DeepONet  il10   3    468.7 +/- 108.1    41.56 +/- 0.26       120x   0.09
 DeepONet  il8    3    574.0 +/- 215.4    42.01 +/- 0.68       119x   0.12
-U-Net     il10  10    114.7 +/- 23.9     1.50 +/- 0.03      3323x   0.02
+U-Net     il10   3    122.6 +/- 20.0     1.48 +/- 0.05      3375x   0.02
 U-Net     il8    3     72.2 +/- 11.1     1.62 +/- 0.10      3083x   0.01
 
 speed-up = T_ABM / T_infer   (compute saved per surrogate query)
