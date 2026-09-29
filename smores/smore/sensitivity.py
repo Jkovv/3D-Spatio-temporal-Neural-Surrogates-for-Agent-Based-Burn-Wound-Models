@@ -31,7 +31,7 @@ def _fit_gp(theta, y):
                        length_scale_bounds=(1e-2, 1e2), nu=2.5)
               + WhiteKernel(1e-3, (1e-6, 1e1)))
     gp = GaussianProcessRegressor(kernel=kernel, normalize_y=False,
-                                  n_restarts_optimizer=10, alpha=1e-10)
+                                  n_restarts_optimizer=10, alpha=1e-10, random_state=0)
     gp.fit(Xt, yt)
 
     def predict(theta_new):

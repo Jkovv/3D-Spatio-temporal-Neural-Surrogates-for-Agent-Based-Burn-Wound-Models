@@ -1,0 +1,38 @@
+======================================================================
+IDENTIFIABILITY ANALYSIS - sensitivity is not identifiability
+======================================================================
+source: ../results/calibration_results_topk10.json
+non-identifiable threshold: recovery R2 < 0.0
+
+rank       param   Sobol_ST  recovery_R2    nRMSE                       verdict
+------------------------------------------------------------------------------
+   1    sigmoidb      0.456       +0.786    0.134      sensitive & identifiable
+   2       keil8      0.172       +0.803    0.128      sensitive & identifiable
+   3     init_ec      0.139       +0.045    0.282      sensitive & identifiable
+   4     km2il10      0.126       +0.519    0.200      sensitive & identifiable
+   5      km2tgf      0.102       +0.575    0.188      sensitive & identifiable
+   6      km1il6      0.088       +0.548    0.194         weak but identifiable
+   7      lnril8      0.077       -0.950    0.403  neither (correctly filtered)
+   8      init_n      0.054       -0.455    0.347  neither (correctly filtered)
+   9      init_f      0.010       -0.837    0.399  neither (correctly filtered)
+  10      init_m      0.002       -1.663    0.471  neither (correctly filtered)
+
+KEY FINDING:
+  (no sensitive-but-non-identifiable parameters at this threshold)
+
+======================================================================
+EFFECT OF THE FILTER: top-5-by-Sobol  vs  5-identifiable
+======================================================================
+  top-5 by Sobol      : ['sigmoidb', 'keil8', 'init_ec', 'km1il6', 'km2il10']
+    mean nRMSE        = 0.215
+  5 identifiable      : ['sigmoidb', 'keil8', 'km1il6', 'km2il10', 'km2tgf']
+    mean nRMSE        = 0.198
+
+  swapping the non-identifiable init_ec for km2tgf lowers mean
+  nRMSE by 0.017 (8% relative improvement).
+  -> Filtering on identifiability, not sensitivity alone, gives the
+     better-constrained calibration.
+
+======================================================================
+
+[saved] /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models/smores/helpers/identifiability_report.txt

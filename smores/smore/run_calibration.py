@@ -60,7 +60,11 @@ def main():
     print(f"      calibrating ({selection_mode}): {top_k}")
 
     print(f"[3/3] SMoRe ParS leave-one-out recovery on {len(top_k)} params ...")
-    theta_sm, sm_names = fit_surrogates(Y, t)
+    # Stage 1: the per-cytokine summary observables (final, mean, max, AUC)
+    # are the trajectory representation that is inverted; the saturating
+    # logistic fits these trajectories poorly (median R2 ~0 for the sparse
+    # cytokines) and is kept only as a diagnostic.
+    theta_sm, sm_names = feats, list(FEATURE_NAMES)
     sel_idx = [names.index(s) for s in top_k]
     rec = leave_one_out_recovery(theta, theta_sm, names, bounds, sel_idx)
     for pn in rec["selected_params"]:

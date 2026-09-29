@@ -222,7 +222,7 @@ def run_pipeline(theta, Y, t_grid, names, bounds, cyts, args, label):
     print(f"  [{label}] ranking (mean ST):")
     for r in sob["ranking"]:
         print(f"      {r['param']:10s} ST={r['ST_mean']:.4f}")
-    theta_sm, _ = fit_surrogates(Y, t_grid)
+    theta_sm = feats  # invert the summary observables (see run_calibration.py)
     rec = leave_one_out_recovery(theta, theta_sm, names, bounds,
                                  [names.index(s) for s in top_k])
     print(f"  [{label}] recovery:")

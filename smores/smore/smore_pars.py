@@ -36,15 +36,19 @@ def fit_surrogate_one(t, y):
     """Fit (A, k, t0) to one cytokine trajectory. Returns 3 surrogate params."""
     t = np.asarray(t, float); y = np.asarray(y, float)
     tn = (t - t[0]) / max(1e-9, (t[-1] - t[0]))      # normalise time to [0,1]
-    A0 = max(y.max(), 1e-30)
-    p0 = [A0, 8.0, 0.5]
-    bounds = ([0.0, 0.0, -1.0], [10 * A0 + 1e-30, 200.0, 2.0])
+    # Fit in units of the trajectory's own maximum: at physical concentration
+    # scales (~1e-9) the optimiser does not move from p0 otherwise.
+    s = max(np.abs(y).max(), 1e-30)
+    z = y / s
+    p0 = [1.0, 8.0, 0.5]
+    bounds = ([0.0, 0.0, -1.0], [10.0, 200.0, 2.0])
     try:
-        popt, _ = curve_fit(_saturating, tn, y, p0=p0, bounds=bounds, maxfev=20000)
+        popt, _ = curve_fit(_saturating, tn, z, p0=p0, bounds=bounds, maxfev=20000)
     except Exception:
-        # fallback: crude moment estimates so the pipeline never dies on one run
-        popt = [A0, 8.0, 0.5]
-    return np.array(popt)
+        popt = [1.0, 8.0, 0.5]
+    popt = np.array(popt, dtype=float)
+    popt[0] *= s
+    return popt
 
 
 def fit_surrogates(Y, t_grid):
@@ -78,7 +82,7 @@ class ABMtoSMMapping:
                                length_scale_bounds=(1e-2, 1e2), nu=2.5)
                       + WhiteKernel(1e-3, (1e-6, 1e1)))
             gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=8,
-                                          alpha=1e-10)
+                                          alpha=1e-10, random_state=0)
             gp.fit(Xt, Yt[:, j])
             self.gps.append(gp)
         return self
