@@ -36,3 +36,7 @@ smores/backup_fitbug/
 smores/backup_fitfixA/
 fitcheck*.out
 smores/results/loop_sobolselected_backup/
+smores/results/appendix_*.tex
+smores/results/observable_*.json
+smores/results/predictive_consistency.json
+smores/results/calibration_surrogate_results.json
