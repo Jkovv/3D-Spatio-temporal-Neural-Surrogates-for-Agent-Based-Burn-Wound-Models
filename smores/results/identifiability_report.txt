@@ -23,13 +23,13 @@ KEY FINDING:
 ======================================================================
 EFFECT OF THE FILTER: top-5-by-Sobol  vs  5-identifiable
 ======================================================================
-  top-5 by Sobol      : ['sigmoidb', 'keil8', 'init_ec', 'km1il6', 'km2il10']
-    mean nRMSE        = 0.215
+  top-5 by Sobol      : ['sigmoidb', 'keil8', 'init_ec', 'km2il10', 'km2tgf']
+    mean nRMSE        = 0.195
   5 identifiable      : ['sigmoidb', 'keil8', 'km1il6', 'km2il10', 'km2tgf']
     mean nRMSE        = 0.198
 
   swapping the non-identifiable init_ec for km2tgf lowers mean
-  nRMSE by 0.017 (8% relative improvement).
+  nRMSE by -0.002 (-1% relative improvement).
   -> Filtering on identifiability, not sensitivity alone, gives the
      better-constrained calibration.
 

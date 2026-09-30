@@ -24,7 +24,7 @@ echo "=== [2/3] topk5 by Sobol ==="
 $PY run_calibration.py \
     --sim-root $BASE/sweep/outputs \
     --manifest $BASE/smores/manifest.json \
-    --params sigmoidb keil8 init_ec km1il6 km2il10 \
+    --params sigmoidb keil8 init_ec km2il10 km2tgf \
     --n-saltelli 1024 \
     --out $BASE/smores/results/calibration_results_topk5_sobol.json
 
