@@ -173,6 +173,7 @@ def main():
     ap.add_argument("--procs", type=int, default=8)
     ap.add_argument("--n-cand", type=int, default=20000)
     ap.add_argument("--params", nargs="+", default=None)
+    ap.add_argument("--n-sd", type=float, default=2.0)   # widening of interpolated bounds by GP uncertainty
     a = ap.parse_args()
     D = np.load(a.replicates_npz, allow_pickle=True)
     Y, runs, cyts = D["Y"], [str(r) for r in D["runs"]], [str(c) for c in D["cyts"]]   # Y: (n, R, T, C)
@@ -200,7 +201,7 @@ def main():
     res = evaluate(theta, fits, mu, se, cyts, names, bounds)
     sub = a.params or names                     # ABM parameters of interest (Jain: a handful at a time)
     idx = [names.index(p) for p in sub]
-    C, X, acc = jain_region(theta_all[:, idx], fits, runs, sub, bounds, n_cand=a.n_cand, procs=a.procs)
+    C, X, acc = jain_region(theta_all[:, idx], fits, runs, sub, bounds, n_cand=a.n_cand, procs=a.procs, n_sd=a.n_sd)
     res["jain"] = summarise_region(C, X, acc, sub, theta_all[:, idx]); res["jain"]["params"] = sub
     J = res["jain"]
     print(f"[Jain 2022 region] folds with a non-empty region: {100*(1-J['frac_empty']):.0f}%")
@@ -212,11 +213,10 @@ def main():
     res["replicates_per_point"] = nrep.tolist()
     json.dump(res, open(a.out, "w"), indent=1, default=float)
     print(f"[Bergman 2024 pointwise acceptance, for reference] accepted sweep points per fold: mean {res['mean_accepted']:.1f} of {len(runs)-1}, empty in {100*res['frac_empty']:.0f}% of folds")
-    print(f"{'param':9s} {'SMoRe R2':>9s} {'cover':>6s} {'sd ratio':>9s} | {'direct R2':>9s} {'sd ratio':>9s}")
-    for p in names:
-        s, d = res["smore"][p], res["direct"][p]
-        print(f"{p:9s} {s['r2_median_accepted']:9.3f} {s['coverage']:6.2f} {s['sd_ratio']:9.2f} | {d['r2_median_accepted']:9.3f} {d['sd_ratio']:9.2f}")
-    if "ridge" in res: print("ridge (sd of accepted / sd of sweep, log scale):", {k: round(v, 3) for k, v in res["ridge"].items()})
+    if res["frac_empty"] < 1:
+        print(f"{'param':9s} {'R2':>9s} {'cover':>6s} {'sd ratio':>9s}")
+        for p in names:
+            q = res["smore"][p]; print(f"{p:9s} {q['r2_median_accepted']:9.3f} {q['coverage']:6.2f} {q['sd_ratio']:9.2f}")
 
 
 
@@ -240,7 +240,10 @@ def _sm_bound_matrix(fits, runs):
     return keys, L, U
 
 def _tf(x, lo_bound):          # log-transform positive parameters for interpolation
-    return np.log(np.maximum(x, 1e-300)) if lo_bound >= 0 else x
+    if lo_bound < 0: return x
+    x = np.asarray(x, float); pos = x[x > 0]
+    floor = 1e-3*np.median(pos) if pos.size else 1e-300   # a bound at zero = open on that side
+    return np.log(np.maximum(x, floor))
 
 
 _G = {}
@@ -255,11 +258,14 @@ def _run_fold(arg):
     n, nq = X.shape[0], Lt.shape[1]
     tr = np.arange(n) != kk
     models = []
+    from sklearn.gaussian_process.kernels import Matern, ConstantKernel, WhiteKernel
     for q in range(nq):
         pair = []
-        for M, ks in ((Lt, kern[0]), (Ut, kern[1])):
+        for M in (Lt, Ut):
             y = M[tr, q]; mu_, sd_ = y.mean(), y.std() + 1e-12
-            pair.append((GaussianProcessRegressor(ks[q], optimizer=None).fit(X[tr], (y-mu_)/sd_), mu_, sd_))
+            # hyperparameters are fitted on the 99 training points of this fold only
+            k = ConstantKernel(1.0)*Matern(np.ones(X.shape[1]), nu=2.5) + WhiteKernel(1e-2)
+            pair.append((GaussianProcessRegressor(k, n_restarts_optimizer=1, random_state=0).fit(X[tr], (y-mu_)/sd_), mu_, sd_))
         models.append(pair)
     # the data box: the held-out point's own bounds, or (surrogate-in-the-loop) the
     # bounds fitted to another source's trajectory for the same point
@@ -302,17 +308,7 @@ def jain_region(theta, fits, runs, names, bounds, n_cand=20000, seed=0, n_sd=2.0
     lob = {(n, j): SM[CYT_SM[n]][4][j] for (n, j, _) in keys}
     Lt = np.column_stack([_tf(L[:, q], lob[(n, j)]) for q, (n, j, _) in enumerate(keys)])
     Ut = np.column_stack([_tf(U[:, q], lob[(n, j)]) for q, (n, j, _) in enumerate(keys)])
-    # hyperparameters fitted once per surface on all points; each leave-one-out
-    # fold then conditions the same kernel on the other 99 points
-    kern = []
-    for M in (Lt, Ut):
-        ks = []
-        for q in range(M.shape[1]):
-            y = M[:, q]; mu_, sd_ = np.nanmean(y), np.nanstd(y) + 1e-12
-            k = ConstantKernel(1.0)*Matern(np.ones(X.shape[1]), nu=2.5) + WhiteKernel(1e-2)
-            g = GaussianProcessRegressor(k, n_restarts_optimizer=2, random_state=0).fit(X, (y-mu_)/sd_)
-            ks.append(g.kernel_)
-        kern.append(ks)
+    kern = None                                   # surfaces are fitted inside every fold (no leakage)
     n = len(runs)
     _G.clear()
     _G.update(X=X, C=C, Lt=Lt, Ut=Ut, kern=kern, n_sd=n_sd, n_walk=n_walk,

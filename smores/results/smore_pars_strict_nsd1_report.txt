@@ -1,5 +1,5 @@
 100 points, replicates per point: min 6 max 6
-loaded SM fits and profile-likelihood bounds from /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models/smores/results/smore_pars_strict5.json.fits.json
+loaded SM fits and profile-likelihood bounds from /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models/smores/results/smore_pars_strict_nsd1.json.fits.json
   SM fit il8   (M3): median R2 1.000, min 1.000
   SM fit il6   (M1): median R2 0.992, min 0.968
   SM fit il10  (M1): median R2 0.992, min 0.968
@@ -15,12 +15,17 @@ loaded SM fits and profile-likelihood bounds from /gpfs/scratch1/shared/jkowalcz
   region: 80/100 folds done
   region: 90/100 folds done
   region: 100/100 folds done
-[Jain 2022 region] folds with a non-empty region: 94%
+[Jain 2022 region] folds with a non-empty region: 66%
 param          R2  cov95  sd ratio
-sigmoidb    0.794   0.96      0.46
-km1il6      0.605   0.98      0.76
-km2il10     0.578   0.98      0.77
-init_ec     0.460   0.98      0.72
-keil8       0.399   0.99      0.72
-ridge: {'sd_ratio_sum': 0.063, 'sd_ratio_difference': 1.013}
+keil8       0.287   0.48      0.40
+km1il6      0.612   0.59      0.35
+km2il10     0.713   0.53      0.35
+km2tgf      0.705   0.59      0.32
+lnril8     -0.596   0.42      0.56
+sigmoidb    0.887   0.44      0.21
+init_ec     0.303   0.48      0.40
+init_n     -0.384   0.52      0.62
+init_m     -0.434   0.44      0.55
+init_f     -0.751   0.33      0.59
+ridge: {'sd_ratio_sum': 0.038, 'sd_ratio_difference': 0.563}
 [Bergman 2024 pointwise acceptance, for reference] accepted sweep points per fold: mean 0.0 of 99, empty in 100% of folds

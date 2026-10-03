@@ -216,61 +216,61 @@
  "jain": {
   "per_param": {
    "keil8": {
-    "r2_median_accepted": 0.37274658906171587,
-    "coverage95": 0.9591836734693877,
-    "sd_ratio": 0.6902749926635003
+    "r2_median_accepted": 0.35258895306228233,
+    "coverage95": 0.9489795918367347,
+    "sd_ratio": 0.6915496484066354
    },
    "km1il6": {
-    "r2_median_accepted": 0.662651584414526,
-    "coverage95": 0.9489795918367347,
-    "sd_ratio": 0.699745344619943
+    "r2_median_accepted": 0.641377629058676,
+    "coverage95": 0.9795918367346939,
+    "sd_ratio": 0.7150101567888217
    },
    "km2il10": {
-    "r2_median_accepted": 0.6311012150870308,
+    "r2_median_accepted": 0.6426085908885092,
     "coverage95": 0.9183673469387755,
-    "sd_ratio": 0.6813913739534531
+    "sd_ratio": 0.6890682177166062
    },
    "km2tgf": {
-    "r2_median_accepted": 0.7081215860280912,
-    "coverage95": 0.9693877551020408,
-    "sd_ratio": 0.6546085606830874
+    "r2_median_accepted": 0.6955990795372664,
+    "coverage95": 0.9489795918367347,
+    "sd_ratio": 0.6542454266062746
    },
    "lnril8": {
-    "r2_median_accepted": -0.1601086643370695,
-    "coverage95": 0.9081632653061225,
-    "sd_ratio": 0.9685725469461826
+    "r2_median_accepted": -0.1405585187033589,
+    "coverage95": 0.9285714285714286,
+    "sd_ratio": 0.9837470180579664
    },
    "sigmoidb": {
-    "r2_median_accepted": 0.8640340363035709,
-    "coverage95": 0.9285714285714286,
-    "sd_ratio": 0.40021707651266064
+    "r2_median_accepted": 0.872187232646071,
+    "coverage95": 0.9897959183673469,
+    "sd_ratio": 0.40518410249283404
    },
    "init_ec": {
-    "r2_median_accepted": 0.3822356276033161,
+    "r2_median_accepted": 0.36058997367295265,
     "coverage95": 0.9489795918367347,
-    "sd_ratio": 0.6924345098630061
+    "sd_ratio": 0.6929313695554411
    },
    "init_n": {
-    "r2_median_accepted": -0.054937899777681265,
-    "coverage95": 0.8877551020408163,
-    "sd_ratio": 0.9505800146109299
+    "r2_median_accepted": 0.06974824275552916,
+    "coverage95": 0.9285714285714286,
+    "sd_ratio": 0.9437700813421286
    },
    "init_m": {
-    "r2_median_accepted": 0.00952138166366856,
-    "coverage95": 0.9183673469387755,
-    "sd_ratio": 0.930175908614029
+    "r2_median_accepted": 0.025994665511621884,
+    "coverage95": 0.8673469387755102,
+    "sd_ratio": 0.9286627015720889
    },
    "init_f": {
-    "r2_median_accepted": -0.044983246270104305,
-    "coverage95": 0.8673469387755102,
-    "sd_ratio": 0.9525075713458684
+    "r2_median_accepted": -0.1120937757880478,
+    "coverage95": 0.8775510204081632,
+    "sd_ratio": 0.9725665116332913
    }
   },
   "mean_accepted_frac": 0.98,
   "frac_empty": 0.02,
   "ridge": {
-   "sd_ratio_sum": 0.059690873567111925,
-   "sd_ratio_difference": 0.97590130432561
+   "sd_ratio_sum": 0.06038966243151288,
+   "sd_ratio_difference": 0.9770834880599539
   },
   "params": [
    "keil8",

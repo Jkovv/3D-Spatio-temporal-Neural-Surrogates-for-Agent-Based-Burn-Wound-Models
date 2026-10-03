@@ -215,44 +215,74 @@
  },
  "jain": {
   "per_param": {
-   "sigmoidb": {
-    "r2_median_accepted": 0.7936933556769844,
-    "coverage95": 0.9574468085106383,
-    "sd_ratio": 0.4603431454767482
+   "keil8": {
+    "r2_median_accepted": 0.28699585166008057,
+    "coverage95": 0.48484848484848486,
+    "sd_ratio": 0.3982304141733258
    },
    "km1il6": {
-    "r2_median_accepted": 0.6046615602981626,
-    "coverage95": 0.9787234042553191,
-    "sd_ratio": 0.7574834337475796
+    "r2_median_accepted": 0.6120591622627474,
+    "coverage95": 0.5909090909090909,
+    "sd_ratio": 0.35231935122025493
    },
    "km2il10": {
-    "r2_median_accepted": 0.5777935548981439,
-    "coverage95": 0.9787234042553191,
-    "sd_ratio": 0.7678000718355541
+    "r2_median_accepted": 0.7127551754540176,
+    "coverage95": 0.5303030303030303,
+    "sd_ratio": 0.3481970794042278
+   },
+   "km2tgf": {
+    "r2_median_accepted": 0.7054480460914051,
+    "coverage95": 0.5909090909090909,
+    "sd_ratio": 0.324048709452222
+   },
+   "lnril8": {
+    "r2_median_accepted": -0.5955471194185338,
+    "coverage95": 0.42424242424242425,
+    "sd_ratio": 0.5553013880245308
+   },
+   "sigmoidb": {
+    "r2_median_accepted": 0.8865921995754598,
+    "coverage95": 0.4393939393939394,
+    "sd_ratio": 0.2112059311253349
    },
    "init_ec": {
-    "r2_median_accepted": 0.45951641399631526,
-    "coverage95": 0.9787234042553191,
-    "sd_ratio": 0.7177707284908947
+    "r2_median_accepted": 0.302531270892328,
+    "coverage95": 0.48484848484848486,
+    "sd_ratio": 0.399096178507154
    },
-   "keil8": {
-    "r2_median_accepted": 0.39860085379371657,
-    "coverage95": 0.9893617021276596,
-    "sd_ratio": 0.7171196052719374
+   "init_n": {
+    "r2_median_accepted": -0.3835805891771715,
+    "coverage95": 0.5151515151515151,
+    "sd_ratio": 0.6164383340692128
+   },
+   "init_m": {
+    "r2_median_accepted": -0.4335116541254014,
+    "coverage95": 0.4393939393939394,
+    "sd_ratio": 0.5537011649610042
+   },
+   "init_f": {
+    "r2_median_accepted": -0.7513001000870343,
+    "coverage95": 0.3333333333333333,
+    "sd_ratio": 0.5937888428498875
    }
   },
-  "mean_accepted_frac": 0.94,
-  "frac_empty": 0.06,
+  "mean_accepted_frac": 0.66,
+  "frac_empty": 0.34,
   "ridge": {
-   "sd_ratio_sum": 0.0634025937719893,
-   "sd_ratio_difference": 1.012609349171783
+   "sd_ratio_sum": 0.03825869727216347,
+   "sd_ratio_difference": 0.56331501860893
   },
   "params": [
-   "sigmoidb",
+   "keil8",
    "km1il6",
    "km2il10",
+   "km2tgf",
+   "lnril8",
+   "sigmoidb",
    "init_ec",
-   "keil8"
+   "init_n",
+   "init_m",
+   "init_f"
   ]
  },
  "fits": {

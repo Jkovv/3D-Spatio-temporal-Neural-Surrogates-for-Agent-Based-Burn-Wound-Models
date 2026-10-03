@@ -15,17 +15,17 @@
   region: 100/100 folds done
   folds with a non-empty region: 100%
   param          R2  cov95  sd ratio
-  keil8       0.875   1.00      0.48
-  km1il6     -0.001   0.98      1.04
-  km2il10    -0.002   0.99      1.03
-  km2tgf      0.020   0.98      1.04
-  lnril8     -0.026   0.97      1.03
-  sigmoidb    0.016   0.98      1.04
-  init_ec     0.891   1.00      0.45
-  init_n     -0.001   0.97      1.04
-  init_m     -0.057   0.97      1.03
-  init_f     -0.038   0.85      1.04
-  ridge: {'sd_ratio_sum': 0.069, 'sd_ratio_difference': 0.651}
+  keil8       0.879   1.00      0.48
+  km1il6     -0.015   0.97      1.04
+  km2il10     0.001   0.99      1.03
+  km2tgf      0.017   0.95      1.03
+  lnril8      0.007   0.97      1.04
+  sigmoidb   -0.009   0.99      1.04
+  init_ec     0.894   1.00      0.45
+  init_n     -0.007   0.98      1.03
+  init_m     -0.047   0.97      1.03
+  init_f     -0.018   0.84      1.04
+  ridge: {'sd_ratio_sum': 0.069, 'sd_ratio_difference': 0.652}
 
 [surrogate arm] admissible regions ...
   region: 10/100 folds done
@@ -40,14 +40,14 @@
   region: 100/100 folds done
   folds with a non-empty region: 38%
   param          R2  cov95  sd ratio
-  keil8      -0.780   0.92      1.01
-  km1il6     -0.061   0.92      1.04
-  km2il10    -0.061   0.97      1.04
-  km2tgf      0.055   0.97      1.04
-  lnril8     -0.077   0.95      1.04
-  sigmoidb   -0.058   1.00      1.04
-  init_ec     0.282   0.95      0.93
-  init_n     -0.021   0.97      1.04
-  init_m     -0.077   1.00      1.04
-  init_f      0.027   0.79      1.05
-  ridge: {'sd_ratio_sum': 0.139, 'sd_ratio_difference': 1.364}
+  keil8      -0.806   0.95      1.00
+  km1il6     -0.028   0.97      1.04
+  km2il10    -0.073   0.97      1.03
+  km2tgf      0.027   1.00      1.05
+  lnril8     -0.032   0.95      1.04
+  sigmoidb   -0.047   1.00      1.05
+  init_ec     0.279   0.95      0.93
+  init_n     -0.074   0.97      1.04
+  init_m     -0.039   1.00      1.04
+  init_f      0.026   0.79      1.03
+  ridge: {'sd_ratio_sum': 0.14, 'sd_ratio_difference': 1.359}
