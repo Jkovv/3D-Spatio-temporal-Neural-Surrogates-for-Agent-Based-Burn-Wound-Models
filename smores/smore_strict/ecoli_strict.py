@@ -17,7 +17,7 @@ ap.add_argument("--out", required=True); ap.add_argument("--procs", type=int, de
 ap.add_argument("--n-cand", type=int, default=20000); ap.add_argument("--min-od", type=float, default=0.05)
 a = ap.parse_args()
 say = lambda msg: print(msg, flush=True)
-theta, Y, t_grid, ids, names = load_sweep(a.curves, a.design, a.media, say)
+theta, Y, _masks, t_grid, ids, names = load_sweep(a.curves, a.design, a.media, say)
 theta, Y = np.asarray(theta, float), np.asarray(Y, float)
 # group replicate curves by identical input vector (condition)
 keys = [tuple(np.round(r, 9)) for r in theta]
