@@ -471,7 +471,8 @@ def figK4():
              for s in SEEDS}
     ne = [100 * (1 - L[SEEDS[0]]["abm"]["frac_empty"])] + [100 * (1 - L[s]["surrogate"]["frac_empty"]) for s in SEEDS]
     fig, ax = plt.subplots(figsize=(3.6, 3.0))
-    ax.bar(range(4), ne, color=["#777777"] + [COL["DeepONet"]] * 3, edgecolor="black", lw=0.4)
+    # ABM = no fill; surrogate = the DeepONet colour used in Figs 3-5
+    ax.bar(range(4), ne, color=["white"] + [COL["DeepONet"]] * 3, edgecolor="black", lw=0.6)
     for k, v in enumerate(ne):
         extra = "" if k == 0 else f"\nfield $R^2$ {field[SEEDS[k - 1]]:.3f}"
         ax.text(k, v + 2, f"{v:.0f}\\%{extra}" if plt.rcParams["text.usetex"] else f"{v:.0f}%{extra}",
@@ -485,20 +486,31 @@ def figK4():
 
 
 def figK5():
-    """External E. coli sweep: admissible-region width per experimental input."""
-    E = json.load(open(_res("ecoli_strict.json")))
-    ins = list(E["per_param"]); w = [E["per_param"][p]["sd_ratio"] for p in ins]
-    fig, ax = plt.subplots(figsize=(4.4, 3.0))
-    ax.bar(range(len(ins)), w, color=CC[2], edgecolor="black", lw=0.4)
-    ax.axhline(1, color="grey", lw=0.6, ls=":")
-    ax.set_xticks(range(len(ins)))
-    ax.set_xticklabels([_tx(p.replace("log_", "").replace("genome_Mb", "genome")) for p in ins],
-                       rotation=40, ha="right", fontsize=7)
-    ax.set_ylabel("width of admissible region\n(SD / SD of uniform)", fontsize=8); ax.set_ylim(0, 1.3)
-    ax.text(0.5, 0.45, f"{E['n_conditions']} growing conditions, 6 replicates each\n"
-                       f"region non-empty for {100 * (1 - E['frac_empty']):.0f}" +
-                       ("\\%" if plt.rcParams["text.usetex"] else "%") + " of conditions",
-            transform=ax.transAxes, ha="center", fontsize=7, bbox=dict(fc="white", ec="none", alpha=0.85))
+    """Admissible-region width: ABM parameters next to the E. coli inputs.
+    Width 1 = the region spans the whole sampled range (nothing constrained)."""
+    _, st = _sobol_st()
+    J = json.load(open(_res("smore_pars_strict.json")))["jain"]["per_param"]
+    E = json.load(open(_res("ecoli_strict.json")))["per_param"]
+    abm = sorted(J, key=lambda p: J[p]["sd_ratio"])
+    eco = sorted(E, key=lambda p: E[p]["sd_ratio"])
+    rows = [("ABM", p, J[p]["sd_ratio"], TYPE_COL[PARAM_TYPE[p]]) for p in abm] + \
+           [("E. coli", p, E[p]["sd_ratio"], "white") for p in eco]     # inputs, not ABM parameters: no type colour
+    gap = 1.2
+    y = [i if g == "ABM" else i + gap for i, (g, *_r) in enumerate(rows)]
+    fig, ax = plt.subplots(figsize=(4.0, 3.6))
+    for yi, (g, p, w, c) in zip(y, rows):
+        ax.plot([0, w], [yi, yi], color=("black" if c == "white" else c), lw=1.0, alpha=0.6)
+        ax.scatter(w, yi, s=22, color=c, edgecolor="black", lw=0.4, zorder=3)
+    ax.axvline(1, color="grey", lw=0.7, ls=":")
+    ax.set_yticks(y)
+    ax.set_yticklabels([_tx(p.replace("log_", "").replace("genome_Mb", "genome size")) for _, p, _w, _c in rows],
+                       fontsize=6.5)
+    ax.invert_yaxis(); ax.set_xlim(0, 1.15)
+    ax.set_xlabel("width of admissible region (SD / SD of uniform)", fontsize=8)
+    ymid_abm = np.mean(y[:len(abm)]); ymid_eco = np.mean(y[len(abm):])
+    for ym, lab_ in ((ymid_abm, "ABM, 10 parameters"), (ymid_eco, "E. coli, 9 inputs")):
+        ax.text(1.17, ym, lab_, rotation=270, va="center", ha="left", fontsize=7.5, transform=ax.get_yaxis_transform())
+    ax.axhline((y[len(abm) - 1] + y[len(abm)]) / 2, color="black", lw=0.5)
     fig.tight_layout()
     savef(fig, "F6_external")
 
