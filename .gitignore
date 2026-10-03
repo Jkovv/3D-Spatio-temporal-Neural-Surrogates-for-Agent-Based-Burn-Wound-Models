@@ -40,3 +40,7 @@ smores/results/appendix_*.tex
 smores/results/observable_*.json
 smores/results/predictive_consistency.json
 smores/results/calibration_surrogate_results.json
+smores/backup_optionB/
+smores/backup_loop_matched_optionB/
+smores/results/smore_strict_final/
+smores/results/smore_pars_strict5.json.fits.json

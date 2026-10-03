@@ -157,8 +157,10 @@ def build_surrogate_Y(args, names, cyts):
     T = Y_abm_full.shape[1]
 
     cyt_idx = [CYTOKINES.index(c) for c in cyts]
-    Y_abm = Y_abm_full[:, :, cyt_idx]                  # (n_runs, T, len(cyts))
+    # ABM arm: the same volume-averaged quantity as the surrogate arm (true_meanconc)
+    Y_abm = np.zeros((len(run_ids), T, len(cyt_idx)))
     Y_sur = np.zeros_like(Y_abm)
+    Tmin = T
     diagnostics = {c: {} for c in cyts}
     missing_runs = set()
 
@@ -185,6 +187,8 @@ def build_surrogate_Y(args, names, cyts):
             mc = predict_meanconc(mod, model, args.model, run_dir, ci, clip_max)
             Tc = min(len(mc), T)
             Y_sur[ri, :Tc, j] = mc[:Tc]
+            Y_abm[ri, :Tc, j] = true_meanconc(run_dir, ci, clip_max)[:Tc]
+            Tmin = min(Tmin, Tc)
             diagnostics[c][rid] = {
                 "gen_r2": r2(true_meanconc(run_dir, ci, clip_max)[:Tc], mc[:Tc]),
                 "clip_frac": (meta.get("clipping_vs_frozen_scale", {})
@@ -201,7 +205,8 @@ def build_surrogate_Y(args, names, cyts):
         print(f"[warn] {len(missing_runs)} run(s) had no preprocessed inputs "
               f"under {infer_root} and contribute zeros: "
               f"{sorted(missing_runs)[:5]}{'...' if len(missing_runs) > 5 else ''}")
-    return theta, Y_sur, Y_abm, run_ids, t_grid, diagnostics
+    # both arms on the frames the surrogate predicts, on the matching time grid
+    return theta, Y_sur[:, :Tmin], Y_abm[:, :Tmin], run_ids, t_grid[-Tmin:], diagnostics
 
 
 def run_pipeline(theta, Y, t_grid, names, bounds, cyts, args, label):

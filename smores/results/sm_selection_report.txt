@@ -1,0 +1,30 @@
+loaded 0/100
+loaded 10/100
+loaded 20/100
+loaded 30/100
+loaded 40/100
+loaded 50/100
+loaded 60/100
+loaded 70/100
+loaded 80/100
+loaded 90/100
+
+cytokine model                median R2  R2>0.9    sum AIC AIC wins
+il8      M1 prod-decay            1.000    1.00    -243991        1
+il8      M2 logistic              0.991    1.00     -71839        0
+il8      M3 prod-decay-peak       1.000    1.00    -246001       99
+il1      M1 prod-decay            0.824    0.17     -48339       40
+il1      M2 logistic              0.840    0.30     -49374       53
+il1      M3 prod-decay-peak       0.827    0.20     -48479        7
+il6      M1 prod-decay            0.989    1.00     -71451       91
+il6      M2 logistic              0.974    1.00     -63136        0
+il6      M3 prod-decay-peak       0.990    1.00     -71299        9
+il10     M1 prod-decay            0.989    1.00     -71447       91
+il10     M2 logistic              0.974    1.00     -63134        0
+il10     M3 prod-decay-peak       0.989    1.00     -71295        9
+tnf      M1 prod-decay            0.957    0.95     -59663       72
+tnf      M2 logistic              0.950    0.87     -58638       27
+tnf      M3 prod-decay-peak       0.957    0.95     -59471        1
+tgf      M1 prod-decay            0.971    1.00     -59810       16
+tgf      M2 logistic              0.990    1.00     -70164       84
+tgf      M3 prod-decay-peak       0.971    1.00     -59610        0

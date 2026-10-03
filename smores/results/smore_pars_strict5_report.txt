@@ -1,0 +1,38 @@
+100 points, replicates per point: min 6 max 6
+loaded SM fits and profile-likelihood bounds from /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models/smores/results/smore_pars_strict5.json.fits.json
+  SM fit il8   (M3): median R2 1.000, min 1.000
+  SM fit il6   (M1): median R2 0.992, min 0.968
+  SM fit il10  (M1): median R2 0.992, min 0.968
+  SM fit tnf   (M1): median R2 0.934, min 0.798
+  SM fit tgf   (M2): median R2 0.937, min 0.695
+  region: 10/100 folds done
+  region: 20/100 folds done
+  region: 30/100 folds done
+  region: 40/100 folds done
+  region: 50/100 folds done
+  region: 60/100 folds done
+  region: 70/100 folds done
+  region: 80/100 folds done
+  region: 90/100 folds done
+  region: 100/100 folds done
+[Jain 2022 region] folds with a non-empty region: 97%
+param          R2  cov95  sd ratio
+sigmoidb    0.828   0.96      0.43
+keil8       0.497   0.97      0.70
+init_ec     0.515   0.97      0.70
+km2il10     0.552   0.97      0.75
+km2tgf      0.604   0.95      0.71
+ridge: {'sd_ratio_sum': 0.062, 'sd_ratio_difference': 0.991}
+[Bergman 2024 pointwise acceptance, for reference] accepted sweep points per fold: mean 0.0 of 99, empty in 100% of folds
+param      SMoRe R2  cover  sd ratio | direct R2  sd ratio
+keil8           nan    nan       nan |    -0.188       nan
+km1il6          nan    nan       nan |    -0.966       nan
+km2il10         nan    nan       nan |    -1.545       nan
+km2tgf          nan    nan       nan |    -1.009       nan
+lnril8          nan    nan       nan |    -1.188       nan
+sigmoidb        nan    nan       nan |    -0.605       nan
+init_ec         nan    nan       nan |    -0.149       nan
+init_n          nan    nan       nan |    -1.014       nan
+init_m          nan    nan       nan |    -0.850       nan
+init_f          nan    nan       nan |    -1.407       nan
+ridge (sd of accepted / sd of sweep, log scale): {'sd_ratio_log_product': nan, 'sd_ratio_log_init_ec': nan, 'sd_ratio_log_keil8': nan}
