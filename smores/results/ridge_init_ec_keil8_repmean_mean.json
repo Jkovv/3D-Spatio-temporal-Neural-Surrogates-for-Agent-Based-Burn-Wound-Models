@@ -1,0 +1,12 @@
+{
+  "observable": "il8_mean",
+  "n_train": 100,
+  "emulator_cv_r2_mean": 0.9999997968102061,
+  "emulator_cv_r2_std": 1.0937550887445846e-07,
+  "corr_obs_product": 0.9999999461167314,
+  "corr_obs_init_ec": 0.7017463954508636,
+  "corr_obs_keil8": 0.7016461713320382,
+  "along_ridge_std": 3.990252514624274e-11,
+  "total_std": 3.5730560060359434e-10,
+  "flatness_ratio": 0.11167618161829992
+}

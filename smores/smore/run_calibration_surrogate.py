@@ -274,6 +274,11 @@ def main():
           f"cytokines {args.cytokines}) ...")
     theta, Y_sur, Y_abm, run_ids, t_grid, diag = build_surrogate_Y(
         args, names, args.cytokines)
+    # save both arms' trajectories so that any later analysis (e.g. SMoRe ParS on
+    # surrogate-predicted trajectories) can run on CPU without re-running the network
+    np.savez(args.out.replace(".json", "") + "_trajectories.npz",
+             theta=theta, Y_sur=Y_sur, Y_abm=Y_abm, run_ids=np.array(run_ids),
+             t_grid=np.asarray(t_grid), cytokines=np.array(args.cytokines))
 
     print(f"[2/3] Sobol + SMoRe ParS on SURROGATE observables ...")
     sur = run_pipeline(theta, Y_sur, t_grid, names, bounds,

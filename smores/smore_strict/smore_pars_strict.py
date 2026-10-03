@@ -231,7 +231,8 @@ def main():
 def _sm_bound_matrix(fits, runs):
     keys = []
     for name in CYT_SM:
-        f0 = next(f[name] for f in fits if f.get(name))
+        f0 = next((f[name] for f in fits if f.get(name)), None)
+        if f0 is None: continue                 # cytokine absent from this data set
         for j, pn in enumerate(f0["names"]):
             keys.append((name, j, pn))
     L = np.array([[fits[i][n]["lo"][j] if fits[i].get(n) else np.nan for (n, j, _) in keys] for i in range(len(runs))])
@@ -260,7 +261,10 @@ def _run_fold(arg):
             y = M[tr, q]; mu_, sd_ = y.mean(), y.std() + 1e-12
             pair.append((GaussianProcessRegressor(ks[q], optimizer=None).fit(X[tr], (y-mu_)/sd_), mu_, sd_))
         models.append(pair)
-    dl, du = Lt[kk], Ut[kk]; dw = np.maximum(du - dl, 1e-9)
+    # the data box: the held-out point's own bounds, or (surrogate-in-the-loop) the
+    # bounds fitted to another source's trajectory for the same point
+    dl, du = (_G["Ld"][kk], _G["Ud"][kk]) if "Ld" in _G else (Lt[kk], Ut[kk])
+    dw = np.maximum(du - dl, 1e-9)
     def violation(P):
         v = np.zeros(len(P))
         for q, ((gl, ml, sl), (gu, mu2, su)) in enumerate(models):
@@ -287,7 +291,7 @@ def _run_fold(arg):
             W[ok] = P[ok]; samples.append(W.copy())
     return idx, (np.concatenate(samples) if samples else np.empty((0, X.shape[1])))
 
-def jain_region(theta, fits, runs, names, bounds, n_cand=20000, seed=0, n_sd=2.0, n_walk=200, n_anneal=150, n_sample=100, folds=None, procs=8):
+def jain_region(theta, fits, runs, names, bounds, n_cand=20000, seed=0, n_sd=2.0, n_walk=200, n_anneal=150, n_sample=100, folds=None, procs=8, data_fits=None):
     from sklearn.gaussian_process import GaussianProcessRegressor
     from sklearn.gaussian_process.kernels import Matern, ConstantKernel, WhiteKernel
     from scipy.stats import qmc
@@ -310,8 +314,13 @@ def jain_region(theta, fits, runs, names, bounds, n_cand=20000, seed=0, n_sd=2.0
             ks.append(g.kernel_)
         kern.append(ks)
     n = len(runs)
+    _G.clear()
     _G.update(X=X, C=C, Lt=Lt, Ut=Ut, kern=kern, n_sd=n_sd, n_walk=n_walk,
               n_anneal=n_anneal, n_sample=n_sample, seed=seed)
+    if data_fits is not None:                   # data boxes from another source (e.g. the surrogate)
+        _, Ld, Ud = _sm_bound_matrix(data_fits, runs)
+        _G["Ld"] = np.column_stack([_tf(Ld[:, q], lob[(nn, j)]) for q, (nn, j, _) in enumerate(keys)])
+        _G["Ud"] = np.column_stack([_tf(Ud[:, q], lob[(nn, j)]) for q, (nn, j, _) in enumerate(keys)])
     fl = list(range(n) if folds is None else folds)
     accepted = [None]*len(fl)
     # leave-one-out folds are independent: run them in parallel (fork inherits _G)

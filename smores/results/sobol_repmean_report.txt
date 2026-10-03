@@ -1,0 +1,24 @@
+
+Sobol ranking (mean total-order index) on summaries:
+  sigmoidb   ST=0.575
+  km1il6     ST=0.094
+  km2il10    ST=0.088
+  init_ec    ST=0.087
+  keil8      ST=0.087
+  km2tgf     ST=0.069
+  init_n     ST=0.003
+  lnril8     ST=0.003
+  init_m     ST=0.003
+  init_f     ST=0.000
+
+Sobol ranking (mean total-order index) on sm_parameters:
+  sigmoidb   ST=0.363
+  km2il10    ST=0.275
+  init_ec    ST=0.194
+  init_m     ST=0.179
+  km1il6     ST=0.168
+  km2tgf     ST=0.106
+  keil8      ST=0.094
+  init_f     ST=0.084
+  lnril8     ST=0.076
+  init_n     ST=0.057
