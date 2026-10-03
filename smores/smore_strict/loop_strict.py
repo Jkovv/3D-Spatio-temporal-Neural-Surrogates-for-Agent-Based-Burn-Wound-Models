@@ -13,10 +13,14 @@ ap.add_argument("--trajectories-npz", required=True)     # from run_calibration_
 ap.add_argument("--manifest", required=True); ap.add_argument("--out", required=True)
 ap.add_argument("--procs", type=int, default=8); ap.add_argument("--n-cand", type=int, default=20000)
 ap.add_argument("--params", nargs="+", default=None)
+ap.add_argument("--exclude", nargs="*", default=["run_0062"])   # the surrogate's own training run
 a = ap.parse_args()
 D = np.load(a.trajectories_npz, allow_pickle=True)
 runs = [str(r) for r in D["run_ids"]]; cyts = [str(c) for c in D["cytokines"]]
 Y_sur, Y_abm = D["Y_sur"], D["Y_abm"]                     # (n, T, C) in the loop's cytokine order
+keep = [i for i, r in enumerate(runs) if r not in set(a.exclude)]
+runs, Y_sur, Y_abm = [runs[i] for i in keep], Y_sur[keep], Y_abm[keep]
+print(f"excluded from the loop: {a.exclude}", flush=True)
 m = json.load(open(a.manifest)); names, bounds = m["param_names"], m["bounds"]
 pm = {r["run_id"]: r["params"] for r in m["runs"]}
 theta = np.array([[pm[r][p] for p in names] for r in runs], float)

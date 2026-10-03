@@ -1,0 +1,36 @@
+five-fold CV R2 of the emulator, per observable
+  il8_final    +1.000
+  il8_mean     +1.000
+  il8_max      +1.000
+  il8_auc      +1.000
+  il1_final    +0.898
+  il1_mean     +0.941
+  il1_max      +0.926
+  il1_auc      +0.944
+  il6_final    +0.975
+  il6_mean     +0.969
+  il6_max      +0.975
+  il6_auc      +0.969
+  il10_final   +0.967
+  il10_mean    +0.960
+  il10_max     +0.967
+  il10_auc     +0.960
+  tnf_final    +0.953
+  tnf_mean     +0.953
+  tnf_max      +0.953
+  tnf_auc      +0.953
+  tgf_final    +0.976
+  tgf_mean     +0.971
+  tgf_max      +0.976
+  tgf_auc      +0.971
+  il8   mean +1.000  min +1.000  max +1.000
+  il1   mean +0.927  min +0.898  max +0.944
+  il6   mean +0.972  min +0.969  max +0.975
+  il10  mean +0.963  min +0.960  max +0.967
+  tnf   mean +0.953  min +0.953  max +0.953
+  tgf   mean +0.974  min +0.971  max +0.976
+N= 60: sigmoidb 0.577  km1il6 0.093  keil8 0.091  km2il10 0.087  init_ec 0.086  km2tgf 0.066
+N= 70: sigmoidb 0.576  km1il6 0.093  init_ec 0.088  keil8 0.088  km2il10 0.085  km2tgf 0.070
+N= 80: sigmoidb 0.578  km1il6 0.093  init_ec 0.089  keil8 0.087  km2il10 0.087  km2tgf 0.068
+N= 90: sigmoidb 0.580  km1il6 0.093  init_ec 0.088  keil8 0.088  km2il10 0.087  km2tgf 0.067
+N=100: sigmoidb 0.580  km1il6 0.094  km2il10 0.088  init_ec 0.087  keil8 0.087  km2tgf 0.067
