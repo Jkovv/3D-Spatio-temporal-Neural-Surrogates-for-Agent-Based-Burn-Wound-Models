@@ -10,8 +10,7 @@ Two model families:
     U-Net (3D conv)         -> models/unet_3d/res_<cyt>_run_0062_50_<seed>.json
 
 Calibration (Sobol + SMoRe ParS) reads <sweep-root>/results/ (default:
-smores/results/): sobol_repmean.json, replicates.npz, smore_pars_strict.json,
-smore_pars_strict.json.fits.json, loop_strict_*.json, ecoli_strict.json.
+smores/results/): sobol_repmean.json, smore_pars_strict.json.
 
 FIGURE GROUPS (select with --figs):
   Surrogate (chart, read JSON only):
@@ -26,10 +25,7 @@ FIGURE GROUPS (select with --figs):
           F_diff_models     cross-model |diff| slices, DeepONet vs U-Net
   Calibration (chart, read smores/results/ only):
     K1 -> F4_sobol          Sobol S_T on volume-averaged replicate means
-    K2 -> F5_smore_fits     surrogate-model (ODE) fits at the benchmark run
     K3 -> F5_smore_regions  sensitivity vs recovery + admissible-region widths
-    K4 -> F6_loop           surrogate in the loop (non-empty admissible regions)
-    K5 -> F6_external       E. coli sweep, admissible-region widths
 
 Default (no --figs): builds every chart + field figure + tables.
 
@@ -344,9 +340,7 @@ def figE4():
 #  CALIBRATION CHART FIGURES  (SMoRe ParS, Jain 2022 / Bergman 2024)
 # All read smores/results/ only:
 #   sobol_repmean.json                      Sobol on volume-averaged replicate means
-#   replicates.npz, smore_pars_strict.json(.fits.json)   SMoRe ParS on the ABM
-#   loop_strict_calibration_surrogate_il8*.json, calibration_surrogate_il8*.json
-#   ecoli_strict.json                       external E. coli test
+#   smore_pars_strict.json                  SMoRe ParS on the ABM
 def _res(name):
     for base in (SWEEP_ROOT / "results", SWEEP_ROOT, Path(".")):
         p = base / name
@@ -361,9 +355,6 @@ PARAM_TYPE = {
     "init_ec": "initial", "init_n": "initial", "init_m": "initial",
     "init_f": "initial",
 }
-SM_CYTS = [("il8", "IL-8", "M3"), ("il6", "IL-6", "M1"), ("il10", "IL-10", "M1"),
-           ("tnf", r"TNF-$\alpha$", "M1"), ("tgf", r"TGF-$\beta$", "M2")]
-SM_AMP = {"M1": [1, 1, 0], "M2": [1, 0, 0], "M3": [1, 1, 0, 0]}
 
 
 def _tx(s):
@@ -400,47 +391,13 @@ def figK1():
     savef(fig, "F4_sobol")
 
 
-def _m1(t, c0, p, k): return c0 * np.exp(-k * t) + p / k * (1 - np.exp(-k * t))
-def _m2(t, A, r, t0): return A / (1 + np.exp(-r * (t - t0)))
-def _m3(t, c0, p, k, lam):
-    d = k - lam
-    d = d if abs(d) > 1e-6 else 1e-6
-    return c0 * np.exp(-k * t) + p / d * (np.exp(-lam * t) - np.exp(-k * t))
-SM_F = {"M1": _m1, "M2": _m2, "M3": _m3}
-
-
-def figK2():
-    """Surrogate-model (ODE) fits to the replicate mean at the benchmark run."""
-    D = np.load(_res("replicates.npz"), allow_pickle=True)
-    runs = [str(r) for r in D["runs"]]; cyts = [str(c) for c in D["cyts"]]
-    Y = D["Y"][runs.index(RUN)]                               # (R, T, C)
-    nrep = int(np.sum(np.isfinite(Y[:, 0, 0])))
-    mu = np.nanmean(Y, 0); se = np.nanstd(Y, 0, ddof=1) / np.sqrt(nrep)
-    fits = json.load(open(_res("smore_pars_strict.json.fits.json")))[RUN]
-    t = np.linspace(0, 1, Y.shape[1]); th = t * 100
-    fig, axes = plt.subplots(1, len(SM_CYTS), figsize=(7.4, 1.9), sharey=True)
-    for ax, (c, cl, sm) in zip(axes, SM_CYTS):
-        j = cyts.index(c); s = np.abs(mu[:, j]).max()
-        ax.fill_between(th, (mu[:, j] - 1.96 * se[:, j]) / s, (mu[:, j] + 1.96 * se[:, j]) / s,
-                        color=CC[3], alpha=0.3, lw=0)
-        ax.plot(th, mu[:, j] / s, color=CC[3], lw=0.9)
-        b = np.array(fits[c]["best"], float)
-        ax.plot(th, SM_F[sm](t, *[v / s if a else v for v, a in zip(b, SM_AMP[sm])]), "k--", lw=0.8)
-        ax.set_title(f"{cl} ({sm})", fontsize=8)
-        ax.text(0.04, 0.95, f"$R^2$ {fits[c]['r2']:.3f}", transform=ax.transAxes, fontsize=6.5, va="top")
-        ax.set_xticks([0, 50, 100]); ax.set_xlabel("time (h)", fontsize=7); ax.set_ylim(-0.05, 1.15)
-    axes[0].set_ylabel("volume average / max", fontsize=8)
-    fig.tight_layout()
-    savef(fig, "F5_smore_fits")
-
-
 def figK3():
     """Admissible regions: sensitivity vs recovery, and region width per parameter."""
     _, st = _sobol_st()
     J = json.load(open(_res("smore_pars_strict.json")))["jain"]
     order = sorted(J["per_param"], key=lambda p: -st[p])
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(7.4, 3.0), gridspec_kw={"width_ratios": [1, 1.5]})
-    off = {"km1il6": (4, 5), "km2il10": (4, -8), "init_ec": (4, 5), "keil8": (4, -8), "km2tgf": (-38, 3)}
+    off = {"km1il6": (4, 5), "km2il10": (4, -8), "init_ec": (4, 5), "keil8": (4, -8), "km2tgf": (-14, 7)}
     for p in order:
         r2 = J["per_param"][p]["r2_median_accepted"]
         a1.scatter(st[p], r2, s=26, color=TYPE_COL[PARAM_TYPE[p]], edgecolor="black", lw=0.4, zorder=3)
@@ -461,58 +418,6 @@ def figK3():
     _type_legend(a2, "upper left")
     fig.tight_layout()
     savef(fig, "F5_smore_regions")
-
-
-def figK4():
-    """Surrogate in the loop: held-out points with a non-empty admissible region."""
-    tag = {1: "_seed1", 42: "", 100: "_seed100"}
-    L = {s: json.load(open(_res(f"loop_strict_calibration_surrogate_il8{tag[s]}.json"))) for s in SEEDS}
-    field = {s: json.load(open(_res(f"calibration_surrogate_il8{tag[s]}.json")))["generalisation"]["il8"]["gen_r2_mean"]
-             for s in SEEDS}
-    ne = [100 * (1 - L[SEEDS[0]]["abm"]["frac_empty"])] + [100 * (1 - L[s]["surrogate"]["frac_empty"]) for s in SEEDS]
-    fig, ax = plt.subplots(figsize=(3.6, 3.0))
-    # ABM = no fill; surrogate = the DeepONet colour used in Figs 3-5
-    ax.bar(range(4), ne, color=["white"] + [COL["DeepONet"]] * 3, edgecolor="black", lw=0.6)
-    for k, v in enumerate(ne):
-        extra = "" if k == 0 else f"\nfield $R^2$ {field[SEEDS[k - 1]]:.3f}"
-        ax.text(k, v + 2, f"{v:.0f}\\%{extra}" if plt.rcParams["text.usetex"] else f"{v:.0f}%{extra}",
-                ha="center", va="bottom", fontsize=6.5)
-    ax.set_xticks(range(4)); ax.set_ylim(0, 125)
-    ax.set_xticklabels(["ABM"] + [f"DeepONet\nseed {s}" for s in SEEDS], fontsize=7)
-    ax.set_ylabel("held-out points with a\nnon-empty admissible region (\\%)" if plt.rcParams["text.usetex"]
-                  else "held-out points with a\nnon-empty admissible region (%)", fontsize=8)
-    fig.tight_layout()
-    savef(fig, "F6_loop")
-
-
-def figK5():
-    """Admissible-region width: ABM parameters next to the E. coli inputs.
-    Width 1 = the region spans the whole sampled range (nothing constrained)."""
-    _, st = _sobol_st()
-    J = json.load(open(_res("smore_pars_strict.json")))["jain"]["per_param"]
-    E = json.load(open(_res("ecoli_strict.json")))["per_param"]
-    abm = sorted(J, key=lambda p: J[p]["sd_ratio"])
-    eco = sorted(E, key=lambda p: E[p]["sd_ratio"])
-    rows = [("ABM", p, J[p]["sd_ratio"], TYPE_COL[PARAM_TYPE[p]]) for p in abm] + \
-           [("E. coli", p, E[p]["sd_ratio"], "white") for p in eco]     # inputs, not ABM parameters: no type colour
-    gap = 1.2
-    y = [i if g == "ABM" else i + gap for i, (g, *_r) in enumerate(rows)]
-    fig, ax = plt.subplots(figsize=(4.0, 3.6))
-    for yi, (g, p, w, c) in zip(y, rows):
-        ax.plot([0, w], [yi, yi], color=("black" if c == "white" else c), lw=1.0, alpha=0.6)
-        ax.scatter(w, yi, s=22, color=c, edgecolor="black", lw=0.4, zorder=3)
-    ax.axvline(1, color="grey", lw=0.7, ls=":")
-    ax.set_yticks(y)
-    ax.set_yticklabels([_tx(p.replace("log_", "").replace("genome_Mb", "genome size")) for _, p, _w, _c in rows],
-                       fontsize=6.5)
-    ax.invert_yaxis(); ax.set_xlim(0, 1.15)
-    ax.set_xlabel("width of admissible region (SD / SD of uniform)", fontsize=8)
-    ymid_abm = np.mean(y[:len(abm)]); ymid_eco = np.mean(y[len(abm):])
-    for ym, lab_ in ((ymid_abm, "ABM, 10 parameters"), (ymid_eco, "E. coli, 9 inputs")):
-        ax.text(1.17, ym, lab_, rotation=270, va="center", ha="left", fontsize=7.5, transform=ax.get_yaxis_transform())
-    ax.axhline((y[len(abm) - 1] + y[len(abm)]) / 2, color="black", lw=0.5)
-    fig.tight_layout()
-    savef(fig, "F6_external")
 
 
 #  FIELD FIGURES (preprocessed + weights)
@@ -787,7 +692,7 @@ def figE(frame=86):  # t = 88 h, as in 2D
 
 #  DISPATCH
 CHART_FIGS = {"B1": figB1, "B4": figB4, "B3": figB3, "E4": figE4,
-              "K1": figK1, "K2": figK2, "K3": figK3, "K4": figK4, "K5": figK5}
+              "K1": figK1, "K3": figK3}
 FIELD_FIGS = {"A": figA, "S": figS, "E": figE}
 
 

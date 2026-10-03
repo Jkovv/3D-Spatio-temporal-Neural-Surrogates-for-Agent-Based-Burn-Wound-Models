@@ -50,20 +50,13 @@ LAYOUTS = {
         "sources": ["F4_sobol"],
         "width": 6.5,
     },
-    # Fig 7 = SMoRe ParS on the ABM: (a) surrogate-model fits, (b) sensitivity
-    # vs recovery and (c) admissible-region widths, the last two in one PNG.
+    # Fig 7 = SMoRe ParS on the ABM: (a) sensitivity vs recovery and
+    # (b) admissible-region widths, both in one PNG.
     "fig7_smore": {
-        "orient": "col",
-        "sources": ["F5_smore_fits", "F5_smore_regions"],
-        "width": 8.0,
-        # letters per source, at these x-fractions of that source's width
-        "panel_x": [[0.0], [0.0, 0.40]],
-    },
-    # Fig 8 = surrogate in the loop (a) and the external E. coli test (b).
-    "fig8_loop_external": {
         "orient": "row",
-        "sources": ["F6_loop", "F6_external"],
+        "sources": ["F5_smore_regions"],
         "width": 8.0,
+        "label_x": [0.0, 0.40],
     },
 }
 
