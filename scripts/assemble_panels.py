@@ -50,16 +50,20 @@ LAYOUTS = {
         "sources": ["F4_sobol"],
         "width": 6.5,
     },
-    "fig7_recovery": {
+    # Fig 7 = SMoRe ParS on the ABM: (a) surrogate-model fits, (b) sensitivity
+    # vs recovery and (c) admissible-region widths, the last two in one PNG.
+    "fig7_smore": {
+        "orient": "col",
+        "sources": ["F5_smore_fits", "F5_smore_regions"],
+        "width": 8.0,
+        # letters per source, at these x-fractions of that source's width
+        "panel_x": [[0.0], [0.0, 0.40]],
+    },
+    # Fig 8 = surrogate in the loop (a) and the external E. coli test (b).
+    "fig8_loop_external": {
         "orient": "row",
-        "sources": ["F5_recovery"],
-        "width": 12.0,
-        "wratios": [1.0],
-        # F5_recovery is a single PNG that already holds 3 internal panels.
-        # Stamp 3 letters at these x-fractions; label_y raised so they clear
-        # the panel titles.
-        "label_x": [0.02, 0.36, 0.69],
-        "label_y": 1.005,
+        "sources": ["F6_loop", "F6_external"],
+        "width": 8.0,
     },
 }
 
@@ -206,8 +210,19 @@ def assemble(name, spec, indir, outdir, labels=True, dpi=300):
             padded = [_pad_to_width(im, W) for im in pil_imgs]
             strip_px = max(24, int(0.05 * max(im.height for im in padded)))
             font = _font(int(strip_px * 0.75))
-            labelled = [_add_strip_and_letter(im, f"({LETTERS[i]})", strip_px,
-                        LABEL_X_PX, font) for i, im in enumerate(padded)]
+            if spec.get("panel_x"):
+                # several letters per source (a source holding internal panels)
+                labelled, k = [], 0
+                for im, fx in zip(padded, spec["panel_x"]):
+                    out_i = Image.new("RGB", (im.width, im.height + strip_px), "white")
+                    out_i.paste(im, (0, strip_px)); dr = ImageDraw.Draw(out_i)
+                    for f_ in fx:
+                        dr.text((int(f_ * im.width) + LABEL_X_PX, strip_px // 6),
+                                f"({LETTERS[k]})", fill="black", font=font); k += 1
+                    labelled.append(out_i)
+            else:
+                labelled = [_add_strip_and_letter(im, f"({LETTERS[i]})", strip_px,
+                            LABEL_X_PX, font) for i, im in enumerate(padded)]
             total_h = sum(im.height for im in labelled)
             out = Image.new("RGB", (W, total_h), "white")
             y = 0

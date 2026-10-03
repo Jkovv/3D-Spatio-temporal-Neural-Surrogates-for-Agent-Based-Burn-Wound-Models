@@ -9,11 +9,9 @@ Two model families:
     DeepONet (gated trunk)  -> models/deeponet_3d/res_<cyt>_run_0062_50_<seed>.json
     U-Net (3D conv)         -> models/unet_3d/res_<cyt>_run_0062_50_<seed>.json
 
-Calibration (Sobol + SMoRe ParS) reads the calibration bundles under
-<sweep-root>/ (default: smores/):
-    calibration_results_topk10.json          (full ranking + recovery)
-    calibration_results_topk5_sobol.json
-    calibration_results_topk5_identifiable.json
+Calibration (Sobol + SMoRe ParS) reads <sweep-root>/results/ (default:
+smores/results/): sobol_repmean.json, replicates.npz, smore_pars_strict.json,
+smore_pars_strict.json.fits.json, loop_strict_*.json, ecoli_strict.json.
 
 FIGURE GROUPS (select with --figs):
   Surrogate (chart, read JSON only):
@@ -26,10 +24,12 @@ FIGURE GROUPS (select with --figs):
     A  -> F_eda_slices      xy/xz/yz mid-plane slices, IL-8 vs IL-10 (GT)
     E  -> F_recon_slices    GT / Pred / |diff| slices, DeepONet, both cytokines
           F_diff_models     cross-model |diff| slices, DeepONet vs U-Net
-  Calibration (chart, read calibration JSON only):
-    K1 -> F_sobol         Sobol total-order ranking (bar)
-    K2 -> F_recovery      recovered-vs-true scatter + per-param R2 +
-                          sensitivity-vs-identifiability scatter (init_ec)
+  Calibration (chart, read smores/results/ only):
+    K1 -> F4_sobol          Sobol S_T on volume-averaged replicate means
+    K2 -> F5_smore_fits     surrogate-model (ODE) fits at the benchmark run
+    K3 -> F5_smore_regions  sensitivity vs recovery + admissible-region widths
+    K4 -> F6_loop           surrogate in the loop (non-empty admissible regions)
+    K5 -> F6_external       E. coli sweep, admissible-region widths
 
 Default (no --figs): builds every chart + field figure + tables.
 
@@ -341,127 +341,166 @@ def figE4():
     savef(fig, "F3_midplane_r2")
 
 
-#  CALIBRATION CHART FIGURES  (new: Sobol + recovery)
-def _load_calib(name="calibration_results_topk10.json"):
-    for base in (SWEEP_ROOT, Path(".")):
+#  CALIBRATION CHART FIGURES  (SMoRe ParS, Jain 2022 / Bergman 2024)
+# All read smores/results/ only:
+#   sobol_repmean.json                      Sobol on volume-averaged replicate means
+#   replicates.npz, smore_pars_strict.json(.fits.json)   SMoRe ParS on the ABM
+#   loop_strict_calibration_surrogate_il8*.json, calibration_surrogate_il8*.json
+#   ecoli_strict.json                       external E. coli test
+def _res(name):
+    for base in (SWEEP_ROOT / "results", SWEEP_ROOT, Path(".")):
         p = base / name
         if p.exists():
-            return json.load(open(p))
-    raise FileNotFoundError(f"{name} not found under {SWEEP_ROOT} or ./")
+            return p
+    raise FileNotFoundError(f"{name} not found under {SWEEP_ROOT}/results")
 
 
-# type of each parameter, for colouring (kinetic vs initial-population)
 PARAM_TYPE = {
     "keil8": "kinetic", "km1il6": "kinetic", "km2il10": "kinetic",
-    "km2tgf": "kinetic", "lnril8": "kinetic", "sigmoidb": "kinetic",
+    "km2tgf": "kinetic", "lnril8": "kinetic", "sigmoidb": "structural",
     "init_ec": "initial", "init_n": "initial", "init_m": "initial",
     "init_f": "initial",
 }
+SM_CYTS = [("il8", "IL-8", "M3"), ("il6", "IL-6", "M1"), ("il10", "IL-10", "M1"),
+           ("tnf", r"TNF-$\alpha$", "M1"), ("tgf", r"TGF-$\beta$", "M2")]
+SM_AMP = {"M1": [1, 1, 0], "M2": [1, 0, 0], "M3": [1, 1, 0, 0]}
 
 
-PARAM_TYPE["sigmoidb"] = "structural"
+def _tx(s):
+    """Escape underscores when LaTeX rendering is on."""
+    return s.replace("_", r"\_") if plt.rcParams["text.usetex"] else s
+
+
+def _type_legend(ax, loc):
+    ax.legend(handles=[Patch(fc=TYPE_COL[k], ec="black", lw=0.4, label=l) for k, l in
+                       (("structural", "structural"), ("kinetic", "kinetic"),
+                        ("initial", "initial population"))],
+              loc=loc, fontsize=7, frameon=False)
+
+
+def _sobol_st():
+    rk = json.load(open(_res("sobol_repmean.json")))["summaries"]["ranking"]
+    return [r["param"] for r in rk], {r["param"]: r["ST_mean"] for r in rk}
 
 
 def figK1():
-    """Sobol total-order ranking (horizontal bar), coloured by param type."""
-    d = _load_calib()
-    ranking = d["sobol"]["ranking"]
-    params = [r["param"] for r in ranking]
-    st = [r["ST_mean"] for r in ranking]
-    cols = [TYPE_COL[PARAM_TYPE.get(p, "kinetic")] for p in params]
-
-    fig, ax = plt.subplots(figsize=(5.2, 3.6))
-    y = np.arange(len(params))[::-1]         # highest at top
-    ax.barh(y, st, color=cols, edgecolor="black", lw=0.4)
-    for yi, v in zip(y, st):
-        ax.text(v + 0.005, yi, f"{v:.3f}", va="center", fontsize=7)
-    ax.set_yticks(y); ax.set_yticklabels(params, fontsize=8)
-    ax.set_xlabel(r"Sobol total-order index $S_T$ (mean over observables)")
-    ax.set_xlim(0, max(st) * 1.18)
-    handles = [Patch(fc=TYPE_COL["kinetic"], ec="black", label="kinetic"),
-               Patch(fc=TYPE_COL["initial"], ec="black", label="initial population"),
-               Patch(fc=TYPE_COL["structural"], ec="black", label="structural")]
-    ax.legend(handles=handles, loc="lower right", fontsize=8, framealpha=0.9)
+    """Sobol total-order indices on the volume-averaged replicate means."""
+    order, st = _sobol_st()
+    fig, ax = plt.subplots(figsize=(5.4, 3.0))
+    x = np.arange(len(order))
+    ax.bar(x, [st[p] for p in order], color=[TYPE_COL[PARAM_TYPE[p]] for p in order],
+           edgecolor="black", lw=0.4)
+    for xi, p in zip(x, order):
+        ax.text(xi, st[p] + 0.008, f"{st[p]:.3f}", ha="center", va="bottom", fontsize=7)
+    ax.set_xticks(x); ax.set_xticklabels([_tx(p) for p in order], rotation=40, ha="right", fontsize=8)
+    ax.set_ylabel(r"total-order index $S_T$")
+    ax.set_ylim(0, max(st.values()) * 1.15)
+    _type_legend(ax, "upper right")
     fig.tight_layout()
     savef(fig, "F4_sobol")
 
 
+def _m1(t, c0, p, k): return c0 * np.exp(-k * t) + p / k * (1 - np.exp(-k * t))
+def _m2(t, A, r, t0): return A / (1 + np.exp(-r * (t - t0)))
+def _m3(t, c0, p, k, lam):
+    d = k - lam
+    d = d if abs(d) > 1e-6 else 1e-6
+    return c0 * np.exp(-k * t) + p / d * (np.exp(-lam * t) - np.exp(-k * t))
+SM_F = {"M1": _m1, "M2": _m2, "M3": _m3}
+
+
 def figK2():
-    """Recovery panel: (a) recovered-vs-true for the two best params,
-    (b) recovery R2 per param, (c) sensitivity vs identifiability scatter."""
-    d = _load_calib()
-    ranking = d["sobol"]["ranking"]
-    st_by = {r["param"]: r["ST_mean"] for r in ranking}
-    rec = d["recovery"]
-    params = rec["selected_params"]
-    r2 = rec["r2_per_param"]
-    recovered = np.array(rec["recovered"])   # (100, 10)
-    truth = np.array(rec["truth"])           # (100, 10)
+    """Surrogate-model (ODE) fits to the replicate mean at the benchmark run."""
+    D = np.load(_res("replicates.npz"), allow_pickle=True)
+    runs = [str(r) for r in D["runs"]]; cyts = [str(c) for c in D["cyts"]]
+    Y = D["Y"][runs.index(RUN)]                               # (R, T, C)
+    nrep = int(np.sum(np.isfinite(Y[:, 0, 0])))
+    mu = np.nanmean(Y, 0); se = np.nanstd(Y, 0, ddof=1) / np.sqrt(nrep)
+    fits = json.load(open(_res("smore_pars_strict.json.fits.json")))[RUN]
+    t = np.linspace(0, 1, Y.shape[1]); th = t * 100
+    fig, axes = plt.subplots(1, len(SM_CYTS), figsize=(7.4, 1.9), sharey=True)
+    for ax, (c, cl, sm) in zip(axes, SM_CYTS):
+        j = cyts.index(c); s = np.abs(mu[:, j]).max()
+        ax.fill_between(th, (mu[:, j] - 1.96 * se[:, j]) / s, (mu[:, j] + 1.96 * se[:, j]) / s,
+                        color=CC[3], alpha=0.3, lw=0)
+        ax.plot(th, mu[:, j] / s, color=CC[3], lw=0.9)
+        b = np.array(fits[c]["best"], float)
+        ax.plot(th, SM_F[sm](t, *[v / s if a else v for v, a in zip(b, SM_AMP[sm])]), "k--", lw=0.8)
+        ax.set_title(f"{cl} ({sm})", fontsize=8)
+        ax.text(0.04, 0.95, f"$R^2$ {fits[c]['r2']:.3f}", transform=ax.transAxes, fontsize=6.5, va="top")
+        ax.set_xticks([0, 50, 100]); ax.set_xlabel("time (h)", fontsize=7); ax.set_ylim(-0.05, 1.15)
+    axes[0].set_ylabel("volume average / max", fontsize=8)
+    fig.tight_layout()
+    savef(fig, "F5_smore_fits")
 
-    fig = plt.figure(figsize=(11.0, 3.6), constrained_layout=True)
-    gs = fig.add_gridspec(1, 3)
 
-    # (a) recovered vs true for the two best-recovered parameters.
-    # Colours: green (CC[2]) + purple (CC[4]) from the cytokine palette --
-    # chosen because the recovery panels already use CC[3] (blue) and CC[0]
-    # (red) for kinetic/initial, so these two are free and don't clash.
-    ax = fig.add_subplot(gs[0, 0])
-    best2 = sorted(params, key=lambda p: r2[p], reverse=True)[:2]
-    marks = ["o", "s"]
-    scatter_cols = [CC[2], CC[4]]        # green, purple
-    for pi, p in enumerate(best2):
-        j = params.index(p)
-        t = truth[:, j]; rv = recovered[:, j]
-        # normalise both to [0,1] by the true range, so two params share axes
-        lo, hi = t.min(), t.max()
-        tn = (t - lo) / (hi - lo + 1e-12)
-        rn = (rv - lo) / (hi - lo + 1e-12)
-        ax.scatter(tn, rn, s=18, marker=marks[pi], alpha=0.6,
-                   color=scatter_cols[pi],
-                   edgecolors="black", linewidths=0.3,
-                   label=f"{p} ($R^2$={r2[p]:.2f})")
-    ax.plot([0, 1], [0, 1], color="gray", ls="--", lw=1)
-    ax.set_xlabel("True (normalised)"); ax.set_ylabel("Recovered (normalised)")
-    ax.set_title("Recovered vs.\\ true", fontsize=10)
-    ax.set_xlim(-0.05, 1.05); ax.set_ylim(-0.05, 1.05)
-    ax.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.18),
-              ncol=2, frameon=False, columnspacing=1.2, handletextpad=0.4)
-
-    # (b) recovery R2 per parameter, ordered by Sobol rank
-    ax = fig.add_subplot(gs[0, 1])
-    order = [r["param"] for r in ranking]
-    vals = [r2[p] for p in order]
-    cols = [TYPE_COL[PARAM_TYPE.get(p, "kinetic")] for p in order]
-    x = np.arange(len(order))
-    ax.bar(x, vals, color=cols, edgecolor="black", lw=0.4)
-    ax.axhline(0, color="black", lw=0.6)
-    ax.set_xticks(x); ax.set_xticklabels(order, rotation=45, ha="right", fontsize=7)
-    ax.set_ylabel(r"Recovery $R^2$")
-    ax.set_title("Recovery by parameter", fontsize=10)
-    ax.set_ylim(min(vals) - 0.2, 1.05)
-
-    # (c) sensitivity vs identifiability
-    ax = fig.add_subplot(gs[0, 2])
+def figK3():
+    """Admissible regions: sensitivity vs recovery, and region width per parameter."""
+    _, st = _sobol_st()
+    J = json.load(open(_res("smore_pars_strict.json")))["jain"]
+    order = sorted(J["per_param"], key=lambda p: -st[p])
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(7.4, 3.0), gridspec_kw={"width_ratios": [1, 1.5]})
+    off = {"km1il6": (4, 5), "km2il10": (4, -8), "init_ec": (4, 5), "keil8": (4, -8), "km2tgf": (-38, 3)}
     for p in order:
-        c = TYPE_COL[PARAM_TYPE.get(p, "kinetic")]
-        ax.scatter(st_by[p], r2[p], s=45, color=c, edgecolors="black", linewidths=0.4)
-        # annotate the standout cases
-        if p in ("init_ec", "keil8", "sigmoidb"):
-            ax.annotate(p, (st_by[p], r2[p]), textcoords="offset points",
-                        xytext=(6, 4), fontsize=7)
-    ax.axhline(0, color="gray", ls="--", lw=1)
-    ax.set_xlabel(r"Sobol $S_T$ (sensitivity)")
-    ax.set_ylabel(r"Recovery $R^2$ (identifiability)")
-    ax.set_title("Sensitivity $\\neq$ identifiability", fontsize=10)
-    # shade the "sensitive but not identifiable" region
-    xlim = ax.get_xlim()
-    ax.axhspan(ax.get_ylim()[0], 0, xmin=0, xmax=1, color="#e6194b", alpha=0.05)
+        r2 = J["per_param"][p]["r2_median_accepted"]
+        a1.scatter(st[p], r2, s=26, color=TYPE_COL[PARAM_TYPE[p]], edgecolor="black", lw=0.4, zorder=3)
+        a1.annotate(_tx(p), (st[p], r2), xytext=off.get(p, (4, -2)), textcoords="offset points", fontsize=6.5)
+    a1.axhline(0, color="grey", lw=0.6, ls=":"); a1.set_xscale("log"); a1.set_xlim(2e-4, 1.5)
+    a1.set_xlabel(r"$S_T$ (log scale)", fontsize=8); a1.set_ylabel(r"recovery $R^2$ (region median)", fontsize=8)
+    x = np.arange(len(order)); w = [J["per_param"][p]["sd_ratio"] for p in order]
+    a2.bar(x, w, color=[TYPE_COL[PARAM_TYPE[p]] for p in order], edgecolor="black", lw=0.4)
+    rg = J["ridge"]; n = len(order); xr = [n + 0.6, n + 1.6]
+    a2.bar(xr, [rg["sd_ratio_sum"], rg["sd_ratio_difference"]], color="white", edgecolor="black", lw=0.6, hatch="///")
+    for xx, v in list(zip(x, w)) + list(zip(xr, [rg["sd_ratio_sum"], rg["sd_ratio_difference"]])):
+        a2.text(xx, v + 0.02, f"{v:.2f}", ha="center", va="bottom", fontsize=6)
+    a2.axhline(1, color="grey", lw=0.6, ls=":")
+    a2.set_xticks(list(x) + xr)
+    a2.set_xticklabels([_tx(p) for p in order] + [_tx("init_ec + keil8"), _tx("init_ec - keil8")],
+                       rotation=55, ha="right", fontsize=6.5)
+    a2.set_ylabel("width of admissible region\n(SD / SD of uniform)", fontsize=8); a2.set_ylim(0, 1.3)
+    _type_legend(a2, "upper left")
+    fig.tight_layout()
+    savef(fig, "F5_smore_regions")
 
-    handles = [Patch(fc=TYPE_COL["kinetic"], ec="black", label="kinetic"),
-               Patch(fc=TYPE_COL["initial"], ec="black", label="initial population"),
-               Patch(fc=TYPE_COL["structural"], ec="black", label="structural")]
-    fig.legend(handles=handles, loc="outside lower center", ncol=2, fontsize=8)
-    savef(fig, "F5_recovery")
+
+def figK4():
+    """Surrogate in the loop: held-out points with a non-empty admissible region."""
+    tag = {1: "_seed1", 42: "", 100: "_seed100"}
+    L = {s: json.load(open(_res(f"loop_strict_calibration_surrogate_il8{tag[s]}.json"))) for s in SEEDS}
+    field = {s: json.load(open(_res(f"calibration_surrogate_il8{tag[s]}.json")))["generalisation"]["il8"]["gen_r2_mean"]
+             for s in SEEDS}
+    ne = [100 * (1 - L[SEEDS[0]]["abm"]["frac_empty"])] + [100 * (1 - L[s]["surrogate"]["frac_empty"]) for s in SEEDS]
+    fig, ax = plt.subplots(figsize=(3.6, 3.0))
+    ax.bar(range(4), ne, color=["#777777"] + [COL["DeepONet"]] * 3, edgecolor="black", lw=0.4)
+    for k, v in enumerate(ne):
+        extra = "" if k == 0 else f"\nfield $R^2$ {field[SEEDS[k - 1]]:.3f}"
+        ax.text(k, v + 2, f"{v:.0f}\\%{extra}" if plt.rcParams["text.usetex"] else f"{v:.0f}%{extra}",
+                ha="center", va="bottom", fontsize=6.5)
+    ax.set_xticks(range(4)); ax.set_ylim(0, 125)
+    ax.set_xticklabels(["ABM"] + [f"DeepONet\nseed {s}" for s in SEEDS], fontsize=7)
+    ax.set_ylabel("held-out points with a\nnon-empty admissible region (\\%)" if plt.rcParams["text.usetex"]
+                  else "held-out points with a\nnon-empty admissible region (%)", fontsize=8)
+    fig.tight_layout()
+    savef(fig, "F6_loop")
+
+
+def figK5():
+    """External E. coli sweep: admissible-region width per experimental input."""
+    E = json.load(open(_res("ecoli_strict.json")))
+    ins = list(E["per_param"]); w = [E["per_param"][p]["sd_ratio"] for p in ins]
+    fig, ax = plt.subplots(figsize=(4.4, 3.0))
+    ax.bar(range(len(ins)), w, color=CC[2], edgecolor="black", lw=0.4)
+    ax.axhline(1, color="grey", lw=0.6, ls=":")
+    ax.set_xticks(range(len(ins)))
+    ax.set_xticklabels([_tx(p.replace("log_", "").replace("genome_Mb", "genome")) for p in ins],
+                       rotation=40, ha="right", fontsize=7)
+    ax.set_ylabel("width of admissible region\n(SD / SD of uniform)", fontsize=8); ax.set_ylim(0, 1.3)
+    ax.text(0.5, 0.45, f"{E['n_conditions']} growing conditions, 6 replicates each\n"
+                       f"region non-empty for {100 * (1 - E['frac_empty']):.0f}" +
+                       ("\\%" if plt.rcParams["text.usetex"] else "%") + " of conditions",
+            transform=ax.transAxes, ha="center", fontsize=7, bbox=dict(fc="white", ec="none", alpha=0.85))
+    fig.tight_layout()
+    savef(fig, "F6_external")
 
 
 #  FIELD FIGURES (preprocessed + weights)
@@ -736,7 +775,7 @@ def figE(frame=86):  # t = 88 h, as in 2D
 
 #  DISPATCH
 CHART_FIGS = {"B1": figB1, "B4": figB4, "B3": figB3, "E4": figE4,
-              "K1": figK1, "K2": figK2}
+              "K1": figK1, "K2": figK2, "K3": figK3, "K4": figK4, "K5": figK5}
 FIELD_FIGS = {"A": figA, "S": figS, "E": figE}
 
 
