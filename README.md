@@ -60,8 +60,7 @@ All ABM results come from a single 100-point Latin-hypercube sweep, with six sto
 | `smore_strict/ecoli_strict.py` | The same pipeline on the *E. coli* growth curves of Gong & Ying (2025), with a positive control |
 | `smore_strict/make_tables.py` | Builds the manuscript tables and `numbers.txt` (every number quoted in the text, with its source) from the result files |
 | `smore_strict/run_v2_*.slurm` | Cluster drivers for the three analyses |
-| `results_v2/` | Results used in the manuscript, and the generated tables in `results_v2/tables/` |
-| `results/` | Inputs of the analyses: replicate trajectories, Sobol indices and their diagnostics, the `init_ec` × `keil8` ridge analysis, the surrogate-model selection, and the volume-averaged DeepONet and ABM trajectories used by the loop |
+| `results/` | Inputs of the analyses (replicate trajectories, Sobol indices and their diagnostics, the `init_ec` × `keil8` ridge analysis, the surrogate-model selection, the volume-averaged DeepONet and ABM trajectories used by the loop), the results used in the manuscript, and the generated tables in `results/tables/` |
 
 ---
 
@@ -76,7 +75,7 @@ sbatch smore_strict/run_v2_loop.slurm    # surrogate predictions as data, three 
 sbatch smore_strict/run_v2_ecoli.slurm   # external test and positive control
 
 # after the jobs have finished
-python smore_strict/make_tables.py --results results_v2 --sobol results/sobol_repmean.json
+python smore_strict/make_tables.py --results results --sobol results/sobol_repmean.json
 
 # figures
 cd ..
@@ -84,6 +83,6 @@ python scripts/figures.py
 python scripts/assemble_panels.py
 ```
 
-Each driver can first be run on a few leave-one-out folds as a check, e.g. `sbatch --export=ALL,FOLDS=3 smore_strict/run_v2_main.slurm`; test output goes to `results_v2_test/`.
+Each driver can first be run on a few leave-one-out folds as a check, e.g. `sbatch --export=ALL,FOLDS=3 smore_strict/run_v2_main.slurm`; test output goes to `results_test/`.
 
 Surrogate results were produced on a single NVIDIA A100 on Snellius.
