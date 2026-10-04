@@ -61,7 +61,7 @@ All ABM results come from a single 100-point Latin-hypercube sweep, with six sto
 | `smore_strict/make_tables.py` | Builds the manuscript tables and `numbers.txt` (every number quoted in the text, with its source) from the result files |
 | `smore_strict/run_v2_*.slurm` | Cluster drivers for the three analyses |
 | `results_v2/` | Results used in the manuscript, and the generated tables in `results_v2/tables/` |
-| `results/` | Replicate trajectories, Sobol indices and their diagnostics, the `init_ec` × `keil8` ridge analysis, and the results of the earlier SMoRe ParS implementation, kept for reference |
+| `results/` | Inputs of the analyses: replicate trajectories, Sobol indices and their diagnostics, the `init_ec` × `keil8` ridge analysis, the surrogate-model selection, and the volume-averaged DeepONet and ABM trajectories used by the loop |
 
 ---
 
