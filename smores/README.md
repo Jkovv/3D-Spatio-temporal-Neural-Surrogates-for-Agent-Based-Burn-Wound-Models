@@ -1,6 +1,6 @@
 # Sensitivity analysis and SMoRe ParS inference for the 3D burn ABM
 
-This directory holds the 100-point Latin-hypercube sweep of the ABM, its replicate runs, the Sobol sensitivity analysis, and parameter inference with SMoRe ParS (Jain et al. 2022; Bergman et al. 2024), including the surrogate-in-the-loop experiment and the external test on measured *E. coli* growth curves. The results in the manuscript come from the scripts in `smore_strict/` and are stored in `results_v2/`.
+This directory holds the 100-point Latin-hypercube sweep of the ABM, its replicate runs, the Sobol sensitivity analysis, and parameter inference with SMoRe ParS (Jain et al. 2022; Bergman et al. 2024), including the surrogate-in-the-loop experiment and the external test on measured *E. coli* growth curves. The results in the manuscript come from the scripts in `smore_strict/` and are stored in `results/`.
 
 ## Layout
 
@@ -13,8 +13,8 @@ smores/
 ├── helpers/                    # supporting analyses (surrogate-model selection, ridge, benchmark run, ...)
 ├── smore/                      # shared modules (observables, Sobol emulator) and the script that writes the loop's surrogate trajectories
 ├── external_data/              # supplementary spreadsheets of Gong & Ying (2025), CC BY 4.0
-├── results/                    # inputs: replicate trajectories, Sobol indices and diagnostics, ridge analysis, SM selection, loop trajectories
-├── results_v2/                 # results used in the manuscript, and the generated tables (results_v2/tables/)
+├── results/                    # inputs (replicate trajectories, Sobol indices, ridge analysis, SM selection, loop trajectories),
+│                               # the results used in the manuscript, and the generated tables (results/tables/)
 └── sweep/outputs/run_0001 … run_0100/   # ABM output: params.json, datafiles/, LatticeData/{Cyto,Cell}Step_*.npz
 ```
 
@@ -63,10 +63,10 @@ python smore_strict/collect_replicates.py --sweep sweep/outputs --replicates <re
 sbatch smore_strict/run_v2_main.slurm    # SMoRe ParS on the ABM: main setting, top five, one SD, quadrature
 sbatch smore_strict/run_v2_loop.slurm    # surrogate predictions as data, training seeds 1, 42, 100
 sbatch smore_strict/run_v2_ecoli.slurm   # real curves, positive control, continuous box, quadrature
-python smore_strict/make_tables.py --results results_v2 --sobol results/sobol_repmean.json
+python smore_strict/make_tables.py --results results --sobol results/sobol_repmean.json
 ```
 
-Each driver can first be run on a few folds as a check: `sbatch --export=ALL,FOLDS=3 smore_strict/run_v2_main.slurm` (output in `results_v2_test/`). The loop needs the volume-averaged DeepONet and ABM trajectories at all sweep points, `results/calibration_surrogate_il8*_trajectories.npz`, written by `smore/run_calibration_surrogate.py`.
+Each driver can first be run on a few folds as a check: `sbatch --export=ALL,FOLDS=3 smore_strict/run_v2_main.slurm` (output in `results_test/`). The loop needs the volume-averaged DeepONet and ABM trajectories at all sweep points, `results/calibration_surrogate_il8*_trajectories.npz`, written by `smore/run_calibration_surrogate.py`.
 
 ---
 
@@ -92,7 +92,7 @@ Each driver can first be run on a few folds as a check: `sbatch --export=ALL,FOL
 
 ---
 
-## Results (`results_v2/`, tables in `results_v2/tables/`)
+## Results (`results/`, tables in `results/tables/`)
 
 | Analysis | Outcome |
 |---|---|
