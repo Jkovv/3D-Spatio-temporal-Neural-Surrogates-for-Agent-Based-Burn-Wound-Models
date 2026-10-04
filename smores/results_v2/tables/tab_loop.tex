@@ -1,0 +1,18 @@
+\begin{table}[!htbp]
+\caption{Surrogate in the loop, IL-8 only, leave-one-out over the 99 sweep points other than the surrogate's training run; values for the training seeds 1 / 42 / 100. The library of bound surfaces always comes from the ABM; only the data interval of the held-out point changes. Relative RMS error of the surrogate's volume-averaged trajectory over the sweep: 3.7 / 5.6 / 4.1\%; on the validation frames of its own training run: 0.8 / 0.9 / 0.8\%; trajectory $R^2$: 0.976 / 0.928 / 0.962. Non-empty: share of points with a non-empty admissible region. Admissible: share of points whose true parameter vector lies in the region. Volume, $R^2$: median share of the parameter box covered by the region, and $R^2$ of the region median, given only for arms in which the true vector lies in the region in at least 90\% of points.}
+\label{tab:loop}
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Data from} & \textbf{Non-empty (\%)} & \textbf{Admissible (\%)} & \textbf{Volume (\%)} & $\mathbf{R^2}$ \texttt{keil8} & $\mathbf{R^2}$ \texttt{init\_ec} \\
+\midrule
+ABM output & 100 / 100 / 100 & 99 / 99 / 99 & 2 / 2 / 2 & +0.87 / +0.87 / +0.87 & +0.89 / +0.89 / +0.89 \\
+Surrogate, no allowance & 38 / 0 / 39 & 1 / 0 / 4 & -- / -- / -- & -- / -- / -- & -- / -- / -- \\
+Surrogate, validation tolerance & 41 / 14 / 45 & 3 / 0 / 11 & -- / -- / -- & -- / -- / -- & -- / -- / -- \\
+Surrogate, per-frame tolerance & 92 / 78 / 83 & 25 / 45 / 70 & -- / -- / -- & -- / -- / -- & -- / -- / -- \\
+Surrogate, error propagated in SM space & 100 / 100 / 100 & 98 / 100 / 100 & 77 / 50 / 59 & +0.13 / +0.28 / +0.21 & +0.34 / +0.47 / +0.45 \\
+Control: ABM + transplanted error & 100 / 100 / 100 & 100 / 100 / 100 & 69 / 46 / 54 & +0.26 / +0.35 / +0.31 & +0.36 / +0.42 / +0.41 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -84,11 +84,11 @@ def assemble(name, spec, indir, outdir, labels=True, dpi=300):
                 ha="center", va="center", fontsize=13, color="0.5",
                 style="italic", transform=ax.transAxes)
         outdir.mkdir(parents=True, exist_ok=True)
-        for ext in ("pdf", "png"):
+        for ext in ("png",):
             fig.savefig(outdir / f"{name}.{ext}", dpi=dpi,
                         bbox_inches="tight", pad_inches=0.02)
         plt.close(fig)
-        print(f"  -> {outdir / f'{name}.pdf'}  (blank placeholder)")
+        print(f"  -> {outdir / f'{name}.png'}  (blank placeholder)")
         return True
 
     paths = [indir / f"{s}.png" for s in stems]
@@ -224,10 +224,8 @@ def assemble(name, spec, indir, outdir, labels=True, dpi=300):
 
     outdir.mkdir(parents=True, exist_ok=True)
     out_png = outdir / f"{name}.png"
-    out_pdf = outdir / f"{name}.pdf"
     out.save(out_png, dpi=(dpi, dpi))
-    out.save(out_pdf, "PDF", resolution=float(dpi))
-    print(f"  -> {out_pdf}  (from {', '.join(stems)})")
+    print(f"  -> {out_png}  (from {', '.join(stems)})")
     return True
 
 
@@ -261,7 +259,7 @@ def main():
     print(f"Done: {ok}/{len(names)} assembled -> {outdir}/")
     if ok:
         print("\nDrop into paper.tex, replacing each \\panelplaceholder{...}{...} with:")
-        print("  \\includegraphics[width=\\linewidth]{figures/<name>.pdf}")
+        print("  \\includegraphics[width=\\linewidth]{figures/<name>.png}")
 
 
 if __name__ == "__main__":

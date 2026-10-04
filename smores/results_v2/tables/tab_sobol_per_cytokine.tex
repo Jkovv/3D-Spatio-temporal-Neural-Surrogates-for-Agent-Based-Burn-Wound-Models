@@ -1,0 +1,22 @@
+\begin{table}[!htbp]
+\caption{Sobol total-order index $S_T$ per cytokine (mean over the four observables of each cytokine) and over all 24 observables. Each secretion rate acts on its own cytokine; \texttt{sigmoidb} acts on several, which is why it leads the 24-observable mean.}
+\label{tab:sobol_per_cytokine}
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccccccc}
+\toprule
+\textbf{Parameter} & \textbf{IL-8} & \textbf{IL-1$\beta$} & \textbf{IL-6} & \textbf{IL-10} & \textbf{TNF-$\alpha$} & \textbf{TGF-$\beta$} & \textbf{All 24} \\
+\midrule
+sigmoidb & $0.000$ & $0.964$ & $0.440$ & $0.470$ & $0.976$ & $0.599$ & $0.575$ \\
+km1il6 & $0.000$ & $0.000$ & $0.562$ & $0.002$ & $0.000$ & $0.003$ & $0.094$ \\
+km2il10 & $0.000$ & $0.000$ & $0.000$ & $0.529$ & $0.000$ & $0.000$ & $0.088$ \\
+init\_ec & $0.507$ & $0.011$ & $0.000$ & $0.000$ & $0.006$ & $0.000$ & $0.087$ \\
+keil8 & $0.507$ & $0.009$ & $0.001$ & $0.000$ & $0.005$ & $0.000$ & $0.087$ \\
+km2tgf & $0.000$ & $0.000$ & $0.000$ & $0.000$ & $0.000$ & $0.416$ & $0.069$ \\
+init\_n & $0.000$ & $0.010$ & $0.000$ & $0.001$ & $0.009$ & $0.000$ & $0.003$ \\
+lnril8 & $0.000$ & $0.010$ & $0.000$ & $0.000$ & $0.006$ & $0.000$ & $0.003$ \\
+init\_m & $0.000$ & $0.000$ & $0.006$ & $0.007$ & $0.000$ & $0.003$ & $0.003$ \\
+init\_f & $0.000$ & $0.000$ & $0.001$ & $0.001$ & $0.000$ & $0.000$ & $0.000$ \\
+\bottomrule
+\end{tabular}
+\end{table}

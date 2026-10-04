@@ -342,7 +342,7 @@ def figE4():
 #   sobol_repmean.json                      Sobol on volume-averaged replicate means
 #   smore_pars_strict.json                  SMoRe ParS on the ABM
 def _res(name):
-    for base in (SWEEP_ROOT / "results", SWEEP_ROOT, Path(".")):
+    for base in (SWEEP_ROOT / "results_v2", SWEEP_ROOT / "results", SWEEP_ROOT, Path(".")):
         p = base / name
         if p.exists():
             return p
@@ -391,19 +391,42 @@ def figK1():
     savef(fig, "F4_sobol")
 
 
+def _sobol_st_max():
+    """Largest per-cytokine total-order index (mean over the four observables of each cytokine)."""
+    d = json.load(open(_res("sobol_repmean.json")))["summaries"]
+    names, pf = d["param_names"], d["per_feature"]; feats = list(pf); cyts = []
+    for f in feats:
+        c = f.split("_")[0]
+        if c not in cyts: cyts.append(c)
+    return {p: max(float(np.mean([pf[f]["ST"][i] for f in feats if f.split("_")[0] == c])) for c in cyts)
+            for i, p in enumerate(names)}
+
+
 def figK3():
-    """Admissible regions: sensitivity vs recovery, and region width per parameter."""
+    """Fig 7: per-cytokine sensitivity vs recovery (region median filled, reference regression open),
+    and admissible-region width per parameter, from results_v2/smore_main.json."""
     _, st = _sobol_st()
-    J = json.load(open(_res("smore_pars_strict.json")))["jain"]
+    stmax = _sobol_st_max()
+    J = json.load(open(_res("smore_main.json")))["jain"]
     order = sorted(J["per_param"], key=lambda p: -st[p])
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(7.4, 3.0), gridspec_kw={"width_ratios": [1, 1.5]})
-    off = {"km1il6": (4, 5), "km2il10": (4, -8), "init_ec": (4, 5), "keil8": (4, -8), "km2tgf": (-14, 7)}
+    off = {"km1il6": (4, 5), "km2il10": (4, -8), "init_ec": (4, 5), "keil8": (4, -9), "km2tgf": (-34, -3)}
+    LOW = ("init_n", "init_m", "init_f", "lnril8")      # cluster at S_T ~ 0: one shared label
     for p in order:
-        r2 = J["per_param"][p]["r2_median_accepted"]
-        a1.scatter(st[p], r2, s=26, color=TYPE_COL[PARAM_TYPE[p]], edgecolor="black", lw=0.4, zorder=3)
-        a1.annotate(_tx(p), (st[p], r2), xytext=off.get(p, (4, -2)), textcoords="offset points", fontsize=6.5)
-    a1.axhline(0, color="grey", lw=0.6, ls=":"); a1.set_xscale("log"); a1.set_xlim(2e-4, 1.5)
-    a1.set_xlabel(r"$S_T$ (log scale)", fontsize=8); a1.set_ylabel(r"recovery $R^2$ (region median)", fontsize=8)
+        q = J["per_param"][p]; c = TYPE_COL[PARAM_TYPE[p]]
+        a1.scatter(stmax[p], q["r2_median_accepted"], s=26, color=c, edgecolor="black", lw=0.4, zorder=3)
+        ri = q.get("r2_inverse_regression")
+        if ri is not None and np.isfinite(ri):
+            a1.scatter(stmax[p], ri, s=26, facecolor="white", edgecolor=c, lw=1.0, zorder=2)
+        if p not in LOW:
+            a1.annotate(_tx(p), (stmax[p], q["r2_median_accepted"]), xytext=off.get(p, (4, -2)),
+                        textcoords="offset points", fontsize=6.5)
+    a1.annotate(", ".join(_tx(p) for p in LOW), (0.01, 0.12), xytext=(8, 14), textcoords="offset points", fontsize=6.5)
+    a1.axhline(0, color="grey", lw=0.6, ls=":"); a1.set_xlim(-0.03, 1.03); a1.set_ylim(-0.6, 1.0)
+    a1.set_xlabel(r"largest per-cytokine $S_T$", fontsize=8); a1.set_ylabel(r"recovery $R^2$", fontsize=8)
+    a1.legend(handles=[Line2D([], [], marker="o", ls="", color="0.5", mec="black", label="region median"),
+                       Line2D([], [], marker="o", ls="", mfc="white", mec="0.4", label="reference regression")],
+              loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2, fontsize=6.5, frameon=False)
     x = np.arange(len(order)); w = [J["per_param"][p]["sd_ratio"] for p in order]
     a2.bar(x, w, color=[TYPE_COL[PARAM_TYPE[p]] for p in order], edgecolor="black", lw=0.4)
     rg = J["ridge"]; n = len(order); xr = [n + 0.6, n + 1.6]

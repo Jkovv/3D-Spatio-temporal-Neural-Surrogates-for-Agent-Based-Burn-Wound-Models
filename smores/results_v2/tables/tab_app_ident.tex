@@ -1,0 +1,25 @@
+\begin{table}[h]
+\centering\footnotesize
+\caption{SMoRe ParS under four settings, leave-one-out over the sweep points: $R^2$ of the region median, with coverage in parentheses. Main: ten parameters, bounds widened by two Gaussian-process standard deviations, replicate standard error as the SM uncertainty (IL-8: fit residual). Top five: only the five parameters with the highest Sobol index inferred. One SD: bounds widened by one standard deviation; the regions are then so small that the sampler mixes poorly, and only containment and non-emptiness should be read. Quadrature: SM misfit added in quadrature to the replicate standard error for every cytokine.}
+\label{tab:app_ident}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Parameter} & \textbf{Main} & \textbf{Top five} & \textbf{One SD} & \textbf{Quadrature} \\
+\midrule
+keil8 & $+0.493$ ($0.94$) & $+0.454$ ($0.96$) & $+0.295$ ($0.87$) & $+0.492$ ($0.95$) \\
+km1il6 & $+0.741$ ($0.95$) & $+0.694$ ($0.96$) & $+0.768$ ($0.91$) & $+0.529$ ($0.96$) \\
+km2il10 & $+0.691$ ($0.97$) & $+0.660$ ($0.98$) & $+0.738$ ($0.93$) & $+0.585$ ($0.96$) \\
+km2tgf & $+0.722$ ($0.97$) & -- & $+0.748$ ($0.92$) & $+0.723$ ($0.98$) \\
+lnril8 & $-0.086$ ($0.94$) & -- & $-0.205$ ($0.89$) & $-0.011$ ($0.95$) \\
+sigmoidb & $+0.882$ ($0.98$) & $+0.834$ ($0.95$) & $+0.887$ ($0.87$) & $+0.838$ ($0.99$) \\
+init\_ec & $+0.499$ ($0.94$) & $+0.492$ ($0.96$) & $+0.336$ ($0.87$) & $+0.502$ ($0.95$) \\
+init\_n & $+0.072$ ($0.98$) & -- & $-0.068$ ($0.89$) & $+0.070$ ($0.96$) \\
+init\_m & $+0.110$ ($0.95$) & -- & $+0.043$ ($0.91$) & $+0.052$ ($0.95$) \\
+init\_f & $+0.015$ ($0.83$) & -- & $-0.176$ ($0.81$) & $-0.030$ ($0.84$) \\
+\midrule
+Non-empty folds & $99$ & $95$ & $90$ & $100$ \\
+True vector admissible & $84\%$ & $88\%$ & $35\%$ & $99\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
