@@ -12,7 +12,7 @@ export PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREA
 BASE=/gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models
 PY=/gpfs/scratch1/shared/jkowalczuk/miniconda3/envs/cc3d/bin/python
 SM=$BASE/smores
-OUT=$SM/results_v2${FOLDS:+_test}
+OUT=$SM/results${FOLDS:+_test}
 mkdir -p $OUT; cd $SM
 F=${FOLDS:+--folds $FOLDS}
 for S in 1 42 100; do

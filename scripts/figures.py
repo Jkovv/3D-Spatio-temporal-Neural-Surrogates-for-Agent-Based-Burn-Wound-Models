@@ -342,7 +342,7 @@ def figE4():
 #   sobol_repmean.json                      Sobol on volume-averaged replicate means
 #   smore_pars_strict.json                  SMoRe ParS on the ABM
 def _res(name):
-    for base in (SWEEP_ROOT / "results_v2", SWEEP_ROOT / "results", SWEEP_ROOT, Path(".")):
+    for base in (SWEEP_ROOT / "results", SWEEP_ROOT, Path(".")):
         p = base / name
         if p.exists():
             return p
@@ -404,7 +404,7 @@ def _sobol_st_max():
 
 def figK3():
     """Fig 7: per-cytokine sensitivity vs recovery (region median filled, reference regression open),
-    and admissible-region width per parameter, from results_v2/smore_main.json."""
+    and admissible-region width per parameter, from results/smore_main.json."""
     _, st = _sobol_st()
     stmax = _sobol_st_max()
     J = json.load(open(_res("smore_main.json")))["jain"]

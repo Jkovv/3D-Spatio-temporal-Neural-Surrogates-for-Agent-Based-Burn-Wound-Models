@@ -2,7 +2,7 @@
 so that no number in the manuscript is typed by hand.  Also writes numbers.txt: every number
 quoted in the text, with the file and key it comes from.
 
-usage:  python smore_strict/make_tables.py --results results_v2 --sobol results/sobol_repmean.json
+usage:  python smore_strict/make_tables.py --results results --sobol results/sobol_repmean.json
 output: <results>/tables/*.tex and <results>/tables/numbers.txt
 Missing result files are skipped with a message.
 """
@@ -10,7 +10,7 @@ import json, os, sys, argparse
 import numpy as np
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--results", default="results_v2")
+ap.add_argument("--results", default="results")
 ap.add_argument("--sobol", default="results/sobol_repmean.json")
 a = ap.parse_args()
 OUT = os.path.join(a.results, "tables"); os.makedirs(OUT, exist_ok=True)

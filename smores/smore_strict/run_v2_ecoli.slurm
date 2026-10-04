@@ -18,7 +18,7 @@ ECOLI=$SM/external_data
 CURVES=$ECOLI/table_S2_curves.xlsx
 DESIGN=$ECOLI/41598_2025_32144_MOESM4_ESM.xlsx
 MEDIA=$ECOLI/41598_2025_32144_MOESM2_ESM.xlsx
-OUT=$SM/results_v2${FOLDS:+_test}
+OUT=$SM/results${FOLDS:+_test}
 mkdir -p $OUT; cd $SM
 F=${FOLDS:+--folds $FOLDS}
 P="--procs $SLURM_CPUS_PER_TASK $F --sigma-mode paper --n-sd 2"
