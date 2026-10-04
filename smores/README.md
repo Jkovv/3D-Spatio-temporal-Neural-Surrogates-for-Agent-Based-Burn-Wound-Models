@@ -1,128 +1,108 @@
-# SMoRe ParS calibration pipeline for the 3D burn ABM
+# Sensitivity analysis and SMoRe ParS inference for the 3D burn ABM
+
+This directory holds the 100-point Latin-hypercube sweep of the ABM, its replicate runs, the Sobol sensitivity analysis, and parameter inference with SMoRe ParS (Jain et al. 2022; Bergman et al. 2024), including the surrogate-in-the-loop experiment and the external test on measured *E. coli* growth curves. The results in the manuscript come from the scripts in `smore_strict/` and are stored in `results_v2/`.
+
 ## Layout
 
 ```
 smores/
-├── manifest.json              # single source of truth: 100 runs × 10 params, LHS seed 42
-├── smore/                     # calibration package
-│   ├── observables.py         # (θ_ABM, cell-sampled mean-concentration trajectory) per run
-│   ├── sensitivity.py         # GP emulator -> Sobol ranking
-│   ├── smore_pars.py          # logistic surface fit (diagnostic), θ_ABM -> observables map, leave-one-out recovery
-│   ├── run_calibration.py     # orchestrates sweep -> Sobol -> SMoRe ParS
-│   ├── run_calibration_surrogate.py   # same, with surrogate-predicted observables
-│   ├── compare_observables.py
-│   └── spatial_observables.py
-├── helpers/                   # helper scripts for the experiments reported in the manuscript
-│   ...
-└── sweep/
-    └── outputs/run_0001 … run_0100/
-        ├── params.json                        # θ for this run (ground truth)
-        ├── datafiles/mean_concentration.txt   # 101 rows: MCS + 6 means + 6 SDs, sampled at cell centres
-        ├── datafiles/cellcount.txt
-        └── LatticeData/{Cyto,Cell}Step_*.npz  # 50³ fields, 6 cytokines, 101 steps
-      ...
+├── manifest.json               # single source of truth: 100 runs × 10 params, LHS seed 42
+├── manifest_replicates.json    # the five additional realisations of every sweep point
+├── setup_runs.py, run_sweep.py, param_loader.py, combi3D*.py, params_*.py ...   # ABM and sweep staging
+├── smore_strict/               # inference pipeline used for the manuscript (see below)
+├── helpers/                    # supporting analyses (surrogate-model selection, ridge, benchmark run, ...)
+├── smore/                      # shared modules (observables, Sobol emulator) and the script that writes the loop's surrogate trajectories
+├── external_data/              # supplementary spreadsheets of Gong & Ying (2025), CC BY 4.0
+├── results/                    # inputs: replicate trajectories, Sobol indices and diagnostics, ridge analysis, SM selection, loop trajectories
+├── results_v2/                 # results used in the manuscript, and the generated tables (results_v2/tables/)
+└── sweep/outputs/run_0001 … run_0100/   # ABM output: params.json, datafiles/, LatticeData/{Cyto,Cell}Step_*.npz
 ```
 
 `manifest.json` carries `param_names`, `bounds` (per parameter `low`/`high` plus a description), `baselines`, and the per-run vectors under `runs`. `params.json` in each run directory nests the vector under a `params` key and is the pairing key between θ and trajectory.
 
 ---
 
-## Parameter injection
+## The sweep
 
-Per-run-directory staging, matching the original sweep's structure and safer than an environment variable, since it does not depend on CC3D passing the environment through to the steppable process.
+### Parameter injection
 
-`run_sweep.py` stages `sweep/runs/<run_id>/Simulation/` with a full copy of the code plus a validated `params.json`; `param_loader.py` reads that local file (or `$SMORE_PARAMS` if set); CC3D writes to `sweep/outputs/<run_id>/`, outside the run directory as CC3D requires, and `params.json` is copied there.
-
-CC3D is launched with:
+Per-run-directory staging, matching the original sweep's structure and safer than an environment variable, since it does not depend on CC3D passing the environment through to the steppable process. `run_sweep.py` stages `sweep/runs/<run_id>/Simulation/` with a full copy of the code plus a validated `params.json`; `param_loader.py` reads that local file (or `$SMORE_PARAMS` if set); CC3D writes to `sweep/outputs/<run_id>/`, outside the run directory as CC3D requires, and `params.json` is copied there. CC3D is launched with:
 
 ```
 <cc3d_python> -m cc3d.run_script --input=<run>/combi3D.cc3d --output-dir=<out>
 ```
 
+`install_cc3d.slurm` installs CompuCell3D on the cluster (one-time, about 1-2 h).
+
+### Sampling and replicates
+
+Latin hypercube via `scipy.stats.qmc.LatinHypercube` (`setup_runs.py`), deterministic under a fixed seed and independent of SALib. The ABM is stochastic, so every sweep point was simulated five more times (`manifest_replicates.json`), giving six realisations per point. `smore_strict/collect_replicates.py` averages each cytokine field over the whole $50^3$ domain at each of the 101 hourly frames, as written by the ABM, and stores the trajectories of all realisations in `results/replicates.npz`:
+
+```bash
+python smore_strict/collect_replicates.py --sweep sweep/outputs --replicates <replicate-output-dir> \
+    --out results/replicates.npz --nrep 5 --frames 101 --procs 16
+```
+
 ---
 
-## Running it
+## Inference pipeline (`smore_strict/`)
+
+| Script | What it does |
+|---|---|
+| `sobol_repmean.py` | Gaussian-process emulator per observable on the replicate-mean volume averages, Sobol indices on a Saltelli sample of it (base sample 1024). Four observables per cytokine: final value, time-average, maximum, area under the curve |
+| `sobol_diagnostics.py` | Five-fold cross-validated $R^2$ of every emulator, and the indices recomputed on 60-100 sweep points |
+| `sobol_per_cytokine.py` | The indices per cytokine, as in the manuscript table |
+| `../helpers/sm_selection.py` | Choice of the surrogate model (SM) per cytokine by AIC among three ODE candidates |
+| `smore_pars_strict.py` | SMoRe ParS: SM fits with profile-likelihood bounds, Gaussian-process bound surfaces, leave-one-out admissible regions |
+| `loop_strict.py` | Surrogate predictions as data: five ways of forming the data interval from the DeepONet's IL-8 trajectories, and a matched-error control |
+| `ecoli_strict.py` | The same pipeline on the *E. coli* growth curves, with a positive control |
+| `make_tables.py` | All manuscript tables of this part, and `numbers.txt`: every number quoted in the text with its source |
+| `run_v2_main.slurm`, `run_v2_loop.slurm`, `run_v2_ecoli.slurm` | Cluster drivers; adjust `BASE` and `PY` at the top |
 
 ```bash
-# local sanity check, no CC3D required
-python verify.py                      # must print ALL CHECKS PASSED
-
-# one-time install (~1-2 h)
-sbatch install_cc3d.slurm && tail -f install_<jobid>.out
-
-# single test run - confirms CC3D produces mean_concentration.txt
-sbatch test_run.slurm && tail -f testrun_<jobid>.out
-
-# full sweep as a SLURM array (staged by test_run.slurm)
-sbatch sweep/sweep_array.sh
+sbatch smore_strict/run_v2_main.slurm    # SMoRe ParS on the ABM: main setting, top five, one SD, quadrature
+sbatch smore_strict/run_v2_loop.slurm    # surrogate predictions as data, training seeds 1, 42, 100
+sbatch smore_strict/run_v2_ecoli.slurm   # real curves, positive control, continuous box, quadrature
+python smore_strict/make_tables.py --results results_v2 --sobol results/sobol_repmean.json
 ```
 
-Once the runs finish:
-
-```bash
-# sensitivity first, then SMoRe ParS on the top-k
-python smore/run_calibration.py --sim-root sweep/outputs \
-    --manifest manifest.json --top-k 5 --out calibration_results.json
-
-# emulator audit - appendix table on how far the Sobol indices can be trusted
-python helpers/emulator_cv.py --sim-root sweep/outputs --manifest manifest.json \
-    --out-tex results/appendix_emulator.tex --out-csv results/emulator_cv.csv
-
-# Sobol ranking on all 24 observables vs. the well-emulated subset
-python helpers/compare_sobol.py --sim-root sweep/outputs --manifest manifest.json \
-    --cv-csv results/emulator_cv.csv --threshold 0.5 \
-    --out-tex results/appendix_sobol_filtered.tex
-
-# response surface of the init_ec x keil8 ridge (final IL-8, raw product)
-python helpers/ridge_raw.py
-
-# diagnostic: does the saturating-logistic surface actually fit the ABM trajectories?
-python helpers/check_surface_fit.py <repo-root>
-```
-
-`emulator_cv.py` and `compare_sobol.py` import `smore/observables.py` and `smore/sensitivity.py` rather than reimplementing anything, so the emulator they score is the emulator the indices stand on. Run `emulator_cv.py` before `compare_sobol.py` - the second consumes the first's CSV.
-
-Note that `compare_sobol.py` takes `--n-saltelli` (default 1024). Pass the same base sample the production `sensitivity.py` run used, otherwise its "All" column will not reproduce the main Sobol table.
+Each driver can first be run on a few folds as a check: `sbatch --export=ALL,FOLDS=3 smore_strict/run_v2_main.slurm` (output in `results_v2_test/`). The loop needs the volume-averaged DeepONet and ABM trajectories at all sweep points, `results/calibration_surrogate_il8*_trajectories.npz`, written by `smore/run_calibration_surrogate.py`.
 
 ---
 
 ## Method notes
 
-**Sampling.** Latin hypercube via `scipy.stats.qmc.LatinHypercube`, deterministic under a fixed seed and independent of SALib, so the Sobol step shares no RNG state with sweep generation.
+**Observable.** Volume averages of the cytokine fields over the $50^3$ domain, taken before any surrogate preprocessing. The six realisations of a sweep point give a mean trajectory and its standard error per cytokine. Time is scaled to $[0,1]$ for the SM fits.
 
-**Sensitivity.** A Gaussian process is fitted per observable on the 100 real runs and Sobol indices are computed on a dense Saltelli sample of that emulator (base sample 1024); a direct Saltelli design on the ABM would need thousands of 50³ trajectories. `sensitivity._fit_gp` standardises θ and y internally and returns `(predict, gp)`. All GPs (Sobol emulator and recovery map) use `random_state=0`, so re-runs reproduce the numbers.
+**Surrogate models.** IL-8: production from a decaying source (M3, four parameters); IL-6, IL-10, TNF-α: production with decay (M1, three); TGF-β: logistic (M2, three). IL-1β is excluded because no candidate describes its separate secretion events. In the inherited model IL-10 is secreted by the same M1 cells as IL-6 and has the same diffusion and decay, so its volume average is the IL-6 average scaled by `km2il10`/`km1il6`; the two SMs share their shape and differ only in amplitude.
 
-**Emulator quality is not uniform, and this bounds the ranking.** Cross-validating the 24 emulators (`helpers/emulator_cv.py`, pooled out-of-fold R², 5-fold, refitted per fold) gives a mean of 0.597 with a range from -0.516 to +0.990. The variation is structured along two axes at once. By cytokine: IL-8 reaches 0.982 while IL-1β reaches 0.387, the same dense-versus-sparse ordering the neural surrogate shows on voxel fields. By observable type: the integrating quantities are emulated well (time-average 0.866, AUC 0.866) and the pointwise ones are not (final 0.046, max 0.610), with four of six final-value observables below zero. A single time point of a stochastic model, or an extremum over one, is dominated by realisation noise; averaging over 101 time points cancels it. Nineteen of 24 pass R² ≥ 0.5.
+**Fits and bounds.** Weighted least squares with the replicate standard error as weight, as in Jain et al.; standard errors below 5% of their median are raised to it. Volume-averaged IL-8 is deterministic to about $10^{-6}$ of its maximum, far below the error of the SM itself, so for a cytokine whose median standard error is below $10^{-4}$ of the maximum (IL-8 at every point) the RMS residual of an unweighted fit is used instead. 95% bounds per SM parameter from the profile likelihood ($\Delta\chi^2 = 3.84$). With `--sigma-mode quadrature` the SM misfit is added to the replicate error for every cytokine.
 
-**Which indices are quantitative.** `helpers/compare_sobol.py` recomputes the ranking on the observables that pass the emulator threshold, as a check on how much of each index rests on poorly emulated observables. Under subsampling of the 100 runs, only the leading index (`sigmoidb`, S_T = 0.456) keeps its rank; `keil8`, `init_ec` and `km2il10` (0.13-0.17) stay within the subsampling spread without a stable order. Treat only the leading index as quantitative and the rest as a screen.
+**Unidentified SM parameters.** A parameter whose best fit lies at an upper limit of its allowed range (or at a lower limit other than zero), or whose profile interval spans the whole range, is not determined by that trajectory. Such a point is left out of the bound surfaces of that parameter only. On the ABM this concerns the initial value of IL-6 and IL-10 at all points (those surfaces are dropped) and two TNF-α parameters at 39 and 4 points.
 
-**Observable.** `datafiles/mean_concentration.txt` holds, per cytokine and output step, the mean of the field sampled at the centres of mass of all cells - not a volume average. These cell-sampled trajectories are reduced to `[final, mean, max, AUC]` per cytokine - 24 scalars - defined once in `smore/observables.py` (`summarize_observable`, `FEATURE_NAMES`); do not redefine them anywhere else. The surrogate-in-the-loop experiment instead averages the full predicted and ABM fields over the volume, in both arms.
+**Bound surfaces and region.** Each bound is interpolated over the ten ABM parameters with a Gaussian process (constant × Matérn-5/2 with ARD, plus white noise; positive parameters on a log scale), fitted without the held-out point. An ABM parameter vector is admissible if, for every SM parameter, its predicted interval, widened by two predictive standard deviations, overlaps the data interval. The region is sampled by rejection on a scrambled Sobol sequence (up to $4\,194\,304$ points, until 300 are admissible), so the sample is uniform and its share is the region's volume fraction; smaller regions are completed by a hit-and-run chain (split $\hat R$ reported), and annealing finds a start when no point is admissible. Bergman et al.'s variant without interpolation accepts no sweep point at any held-out target with 100 points in ten dimensions.
 
-**Stage one of SMoRe ParS.** The trajectory representation that is mapped and inverted is the set of summary observables above. A saturating-logistic surface (plateau, rate, inflection) is still fitted in `smore_pars.py`, in units of each trajectory's maximum (at physical scale, ~1e-9, the optimiser does not move from its starting point), but only as a diagnostic: on the ABM trajectories its median R² is 0.52 for IL-8, 0.15 for TGF-β and about 0 for the other four cytokines, so its parameters do not describe these trajectories. On the *E. coli* growth curves, where it fits (median R² 0.986), it is used as the stage-one representation.
+**Evaluation.** Leave-one-out over the sweep points. Reported per fold: whether the true vector itself is admissible; per parameter the coverage of the central 95% of the region, its width (SD of the region / SD of a uniform over the range), and the $R^2$ of its median; a model-free reference, a Gaussian-process regression from the fitted SM parameters straight to each ABM parameter; and whether the held-out bounds lie within the band of the interpolated surfaces.
 
-**Calibration scope.** SMoRe ParS recovers the top-k from the Sobol ranking. Parameters that do not move the observable are not identifiable and add an unconstrained direction to the fit. In this sweep, including the non-identifiable `init_ec` did not measurably degrade recovery of the other calibrated parameters (see the results table), so the cost of choosing targets by sensitivity alone was one unconstrained parameter. This follows Jain 2022 (few parameters) -> Bergman 2024 (higher-dimensional).
+**Surrogate predictions as data.** The bound surfaces always come from the ABM; only the held-out point's data interval changes. Arms: ABM output; surrogate without allowance for its error; with its validation error on the training run; with its per-frame error over the other sweep points; with the error propagated in SM-parameter space (quantiles, over the other 98 points, of the difference between the SM parameters fitted to surrogate and ABM trajectories; Bonferroni-corrected two-sided 95%); and a control, the held-out ABM trajectory plus the surrogate's error trajectory from another, random point.
 
-**Endothelium is frozen.** `init_ec` affects IL-8 only through the number of constitutive sources, so in the cell-sampled observables it is collinear with `keil8`: multiplying one and dividing the other by the same factor leaves them essentially unchanged. It is therefore sensitive (S_T = 0.139, third of ten) but recovered no better than its mean (R² = +0.045). `helpers/ridge_raw.py` confirms the ridge on a GP emulator of the final cell-sampled IL-8 (cross-validated R² 0.987): the observable correlates with the product `init_ec` × `keil8` at |r| = 0.984, against 0.568 and 0.817 for the two factors separately, and its variation along curves of constant product is 0.18 of its total variation. From the volume-averaged IL-8 used in the loop, `init_ec` is recovered at +0.77, so the non-identifiability depends on how the concentration is measured. It arises from the ABM configuration inherited from Korkmaz et al., not from the calibration method.
+**External data.** 5 strains × 29 media × 6 replicate growth curves (Gong & Ying 2025). The media vary one component at a time, and K⁺/PO₄³⁻ and NH₄⁺/SO₄²⁻ vary together because they come from the same salts. The region is therefore evaluated on the 145 conditions of the design rather than on a continuous box, which consists mostly of media that do not exist. The positive control keeps the design, the replicate residuals and the missing readings, and generates curves in which genome size sets the plateau, K⁺ the rate and NH₄⁺ the midpoint, each over the 5-95% range of the real fits.
+
+**Endothelium is frozen.** `init_ec` affects IL-8 only through the number of constitutive sources, and the IL-8 equation is linear with fixed sources, so volume-averaged IL-8 depends on `init_ec` × `keil8`. A GP emulator of the final replicate-mean IL-8 (cross-validated $R^2$ = 1.000) correlates with the product at |r| = 1.000 and with each factor at 0.702, with a flatness along the ridge of 0.11 (`results/ridge_init_ec_keil8_repmean_*.json`). On fields clipped at the surrogate's training scale the dependence on the product breaks, and the two parameters become separately recoverable.
 
 ---
 
-## Results this pipeline produced
+## Results (`results_v2/`, tables in `results_v2/tables/`)
 
-| Stage | Outcome |
+| Analysis | Outcome |
 |---|---|
-| Sobol, all 24 observables | `sigmoidb` 0.456 clearly first; `keil8` 0.172, `init_ec` 0.139, `km2il10` 0.126 without a stable order |
-| Recovery (leave-one-out, all ten jointly) | `keil8` +0.803, `sigmoidb` +0.786, `km2tgf` +0.575, `km1il6` +0.548, `km2il10` +0.519 |
-| Recovery, non-identifiable | `init_ec` +0.045 despite rank 3; `lnril8`, `init_n`, `init_f`, `init_m` negative |
-| Recovery target choice | Top 5 by Sobol vs `init_ec` replaced by `km1il6`: mean nRMSE 0.195 vs 0.198, no measurable difference |
-| Ridge | Final cell-sampled IL-8 tracks `init_ec` × `keil8` at \|r\| = 0.984 (flatness 0.18) |
-| Surrogate in the loop | Field R² 0.93-0.98 across seeds, `keil8` recovery +0.19 to +0.62, against +0.93 from the ABM's own volume-averaged IL-8 observables |
-| External validation (*E. coli*) | Logistic surface fits the 870 curves closely (median 0.986, against 0.52 on ABM IL-8); no input recovered (leave-one-out on a random 500-curve subsample) |
+| Sobol, 24 observables | `sigmoidb` 0.575 first, then `km1il6`, `km2il10`, `init_ec`, `keil8`, `km2tgf` (0.069-0.094) without a stable order; the other four ≤ 0.003 |
+| Sobol, per cytokine | Each secretion rate dominates its own cytokine (0.42-0.56); `keil8` and `init_ec` 0.507 each on IL-8; `sigmoidb` acts on five cytokines |
+| SMoRe ParS, 10 parameters | `sigmoidb` R² = 0.88 (width 0.40); `km1il6` 0.74, `km2tgf` 0.72, `km2il10` 0.69; `init_ec`, `keil8` ≈ 0.50 each, constrained only through their product (width 0.058 along the sum, 0.971 along the difference); `lnril8`, `init_n`, `init_m`, `init_f` not recovered |
+| Calibration | Per-parameter coverage 0.94-0.98 (`init_f` 0.83, integer values on the range edge); true vector admissible in 84% of folds, 99% with SM misfit in quadrature; held-out bounds within the 2 SD band in a median of 92% |
+| Settings | Top five: same ordering and ridge; one SD: true vector admissible in only 35% of folds |
+| Surrogate predictions as data | Trajectory R² 0.93-0.98; error at unseen points 3.7-5.6% against 0.8-0.9% on the training run's validation frames. Without allowance the true vector is admissible at ≤ 4% of points; with the error propagated in SM space at 98-100%, but the region covers 50-77% of the box instead of 2%, and `keil8` R² falls from 0.87 to 0.13-0.28. The matched-error control loses almost as much |
+| *E. coli*, real curves | Logistic SM median R² 0.983 on 126 growing conditions; median 13 of 145 conditions admissible per curve; genome R² 0.69; true condition admissible in 81% (92% with misfit). On the continuous box the region covers 96.5% of it |
+| *E. coli*, positive control | Inputs acting on rate and midpoint recovered (R² 0.66, 0.76), with the inputs that vary with them; the four inactive inputs unconstrained; the plateau input (genome) narrowed but not recovered |
 
-The surrogate-in-the-loop row is the one worth internalising before reusing this code: the surrogate reproduces the trajectories almost perfectly, yet the parameter is recovered far worse than from the ABM, and field accuracy and recovery do not rank the seeds in the same order.
-A surrogate intended for calibration has to be validated on a recovery task, not only on a field-accuracy metric, and across seeds rather than at one.
-
----
-
-## Status
-
-Validated end-to-end on a synthetic sweep with known θ-dependence: Sobol recovered exactly the injected drivers, and SMoRe ParS recovered them with positive R². The 100-run real sweep has been executed and the results above come from it.
+The surrogate row is the one worth internalising before reusing this code: a surrogate that reproduces trajectories closely can still be unusable as data for inference unless its error away from the training data is measured and propagated, and even then little parameter information may remain.
