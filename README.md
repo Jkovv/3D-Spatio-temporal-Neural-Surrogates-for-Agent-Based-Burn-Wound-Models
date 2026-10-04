@@ -26,7 +26,7 @@ All ABM results come from a single 100-point Latin-hypercube sweep, with six sto
 
 ```
 .
-├── models/      # DeepONet and U-Net: result files and trained weights
+├── models/      # DeepONet and U-Net: result files
 ├── scripts/     # preprocessing, training, evaluation and figure scripts
 ├── figures/     # the manuscript figures (PNG)
 ├── figures_3d/  # individual panels the manuscript figures are assembled from
