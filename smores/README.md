@@ -12,7 +12,7 @@ smores/
 ├── smore_strict/               # inference pipeline used for the manuscript (see below)
 ├── helpers/                    # supporting analyses (surrogate-model selection, ridge, benchmark run, ...)
 ├── smore/                      # shared modules (observables, Sobol emulator) and the script that writes the loop's surrogate trajectories
-├── external_data/              # supplementary spreadsheets of Gong & Ying (2025), CC BY 4.0
+├── external_data/              # place the supplementary spreadsheets of Gong & Ying (2025), CC BY 4.0; not included
 ├── results/                    # inputs (replicate trajectories, Sobol indices, ridge analysis, SM selection, loop trajectories),
 │                               # the results used in the manuscript, and the generated tables (results/tables/)
 └── sweep/outputs/run_0001 … run_0100/   # ABM output: params.json, datafiles/, LatticeData/{Cyto,Cell}Step_*.npz
