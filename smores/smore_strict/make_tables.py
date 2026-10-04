@@ -41,6 +41,7 @@ if os.path.exists(a.sobol):
         ST_all[p] = float(np.mean([max(pf[f]["ST"][i], 0) for f in feats]))
         c_best = max(cyts, key=lambda c: per[c][i]); ST_max[p] = per[c_best][i]; ST_arg[p] = lab.get(c_best, c_best)
     order = sorted(names, key=lambda p: -ST_all[p])
+    hdr_sobol = " & ".join("\\textbf{" + lab.get(c, c) + "}" for c in cyts)
     rows = "\n".join(f"{tex(p)} & " + " & ".join(f"${max(per[c][names.index(p)], 0):.3f}$" for c in cyts) + f" & ${ST_all[p]:.3f}$ \\\\" for p in order)
     write("tab_sobol_per_cytokine.tex", f"""\\begin{{table}}[!htbp]
 \\caption{{Sobol total-order index $S_T$ per cytokine (mean over the four observables of each cytokine) and over all 24 observables. Each secretion rate acts on its own cytokine; \\texttt{{sigmoidb}} acts on several, which is why it leads the 24-observable mean.}}
@@ -49,7 +50,7 @@ if os.path.exists(a.sobol):
 \\setlength{{\\tabcolsep}}{{4pt}}
 \\begin{{tabular}}{{l{'c'*len(cyts)}c}}
 \\toprule
-\\textbf{{Parameter}} & {' & '.join(f'\\textbf{{{lab.get(c, c)}}}' for c in cyts)} & \\textbf{{All 24}} \\\\
+\\textbf{{Parameter}} & {hdr_sobol} & \\textbf{{All 24}} \\\\
 \\midrule
 {rows}
 \\bottomrule
@@ -111,6 +112,7 @@ if var:
         if p not in J["params"]: return "--"
         q = J["per_param"][p]; return f"{r2(q['r2_median_accepted'])} (${q['coverage95']:.2f}$)"
     rows = "\n".join(f"{tex(p)} & " + " & ".join(cell(J, p) for _, J in var) + " \\\\" for p in P)
+    hdr_var = " & ".join("\\textbf{" + n + "}" for n, _ in var)
     tail = ("Non-empty folds & " + " & ".join(f"${J['n_nonempty']}$" for _, J in var) + " \\\\\n"
             "True vector admissible & " + " & ".join(pct(J["truth_admissible_all_folds"]) for _, J in var) + " \\\\")
     write("tab_app_ident.tex", f"""\\begin{{table}}[h]
@@ -120,7 +122,7 @@ if var:
 \\setlength{{\\tabcolsep}}{{4pt}}
 \\begin{{tabular}}{{l{'c'*len(var)}}}
 \\toprule
-\\textbf{{Parameter}} & {' & '.join(f'\\textbf{{{n}}}' for n, _ in var)} \\\\
+\\textbf{{Parameter}} & {hdr_var} \\\\
 \\midrule
 {rows}
 \\midrule
