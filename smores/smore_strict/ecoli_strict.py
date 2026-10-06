@@ -45,6 +45,9 @@ ap.add_argument("--mode", choices=["real", "synthetic"], default="real")
 ap.add_argument("--active", nargs=3, default=["genome_Mb", "log_K+", "log_NH4+"])   # acting on plateau, rate, midpoint
 ap.add_argument("--effect", type=float, default=1.0)     # synthetic: 1 = each active input spans the 5-95% range of the real SM parameter
 ap.add_argument("--synth-seed", type=int, default=0); ap.add_argument("--folds", type=int, default=None)
+ap.add_argument("--synth-q", type=float, nargs=2, default=[0.05, 0.95])   # synthetic: quantile range of the real SM parameters spanned by each active input
+ap.add_argument("--fits-only", action="store_true")                        # stop after the SM fits (diagnostics of the synthetic control)
+ap.add_argument("--drop-genome", type=float, default=None)                 # leave out every curve of this genome size (Mb), e.g. a strain with a shorter window
 ap.add_argument("--support", choices=["design", "grid", "continuous"], default="design")
 ap.add_argument("--continuous", action="store_true")    # same as --support continuous (v1 search space; for comparison)
 a = ap.parse_args()
@@ -60,6 +63,13 @@ else:
     theta, Y, t_grid = np.asarray(theta, float), np.asarray(Y, float), np.asarray(t_grid, float)
     if a.save_npz: np.savez(a.save_npz, theta=theta, Y=Y, t_grid=t_grid, names=np.array(names)); say(f"cached arrays in {a.save_npz}")
 
+if a.drop_genome is not None:
+    gcol0 = names.index("genome_Mb"); keep_c = np.abs(theta[:, gcol0] - a.drop_genome) > 1e-6
+    # window diagnostic: last finite reading per strain (the measurement window differs between strains)
+    for g in np.unique(theta[:, gcol0]):
+        last = [int(np.max(np.where(np.isfinite(y))[0])) for y in Y[theta[:, gcol0] == g]]
+        say(f"  genome {g:.2f} Mb: last finite reading at index {int(np.median(last))} of {Y.shape[1]-1} (median over curves)")
+    theta, Y = theta[keep_c], Y[keep_c]; say(f"dropped genome {a.drop_genome} Mb: {int((~keep_c).sum())} curves removed, {len(Y)} kept")
 # group replicate curves by identical input vector (condition)
 keys = [tuple(np.round(r, 9)) for r in theta]; cond = {}
 for i, k in enumerate(keys): cond.setdefault(k, []).append(i)
@@ -111,16 +121,28 @@ if a.mode == "synthetic":
     ix = {p: names.index(p) for p in a.active}
     pA, pr, pt = a.active
     def span(v, x):
-        q5, q95 = np.quantile(v, [0.05, 0.95]); return 0.5*(q5 + q95) + a.effect*(x - 0.5)*(q95 - q5)
+        q5, q95 = np.quantile(v, a.synth_q); return 0.5*(q5 + q95) + a.effect*(x - 0.5)*(q95 - q5)
     A_s = np.exp(span(logA, Xn[:, ix[pA]])); r_s = np.exp(span(logr, Xn[:, ix[pr]])); t_s = span(t0, Xn[:, ix[pt]])
     signal = S.m2(tn[None, :], A_s[:, None], r_s[:, None], t_s[:, None])         # (n, T)
     resid = (Yrep - mu[:, None, :])*(A_s/np.maximum(np.nanmax(mu, axis=1), 1e-300))[:, None, None]
     Yrep = signal[:, None, :] + resid                                           # NaNs (missing readings) carried over
     mu, se = mean_se(Yrep)
     fits = fit_all(mu, se)
-    res["synthetic"] = {"plateau": pA, "rate": pr, "midpoint": pt, "effect": a.effect,
+    res["synthetic"] = {"plateau": pA, "rate": pr, "midpoint": pt, "effect": a.effect, "quantiles": list(a.synth_q),
                         "inactive": [p for p in names if p not in a.active]}
-    say(f"positive control: plateau <- {pA}; rate <- {pr}; midpoint <- {pt}; each spanning {a.effect} x the 5-95% range of the real values")
+    say(f"positive control: plateau <- {pA}; rate <- {pr}; midpoint <- {pt}; each spanning {a.effect} x the "
+        f"{100*a.synth_q[0]:.0f}-{100*a.synth_q[1]:.0f}% range of the real values")
+    # diagnostic: an SM parameter that the window does not determine (best fit at a limit, or profile interval
+    # spanning the range) is flagged unidentified and leaves the bound surfaces; count the flags per genome
+    gcol = names.index("genome_Mb"); unid = {}
+    for g in np.unique(np.round(th[:, gcol], 6)):
+        sel = [f for f, gg in zip(fits, th[:, gcol]) if abs(gg - g) < 1e-6]
+        unid[str(g)] = {nm: int(sum(bool(f["od"]["unidentified"][j]) for f in sel)) for j, nm in enumerate(fits[0]["od"]["names"])}; unid[str(g)]["n"] = len(sel)
+    res["synthetic"]["unidentified_by_genome"] = unid
+    say(f"  unidentified SM parameters per genome (count of conditions): {unid}")
+    if a.fits_only:
+        res["fits"] = {r: f for r, f in zip(runs, fits)}; res["synthetic"]["A_s"] = A_s.tolist(); res["synthetic"]["r_s"] = r_s.tolist(); res["synthetic"]["t_s"] = t_s.tolist()
+        json.dump(res, open(a.out, "w"), indent=1, default=float); say(f"saved {a.out} (fits only)"); raise SystemExit
     say(f"  generated ranges: plateau {A_s.min():.3f}-{A_s.max():.3f}, rate {r_s.min():.1f}-{r_s.max():.1f}, midpoint {t_s.min():.3f}-{t_s.max():.3f} (time scaled to 0-1)")
 r2 = [f["od"]["r2"] for f in fits if f.get("od")]
 say(f"logistic SM fit on replicate means: median R2 {np.median(r2):.3f}, min {np.min(r2):.3f}, below 0.9: {sum(v < 0.9 for v in r2)} of {len(r2)}")
@@ -162,9 +184,26 @@ if support == "design":
     n_adm = np.array([len(A) for A in acc]); n_gen = np.array([len(np.unique(rnd(A[:, 0]))) for A in acc])
     n_med = np.array([len(np.unique(rnd(A[:, 1:]), axis=0)) if len(A) else 0 for A in acc])
     n_med_all = len(np.unique(rnd(th_design[:, 1:]), axis=0)); n_gen_all = len(np.unique(rnd(th_design[:, 0])))
+    # map every admissible point back to its design condition, and classify the genome of the held-out curve
+    Dn = (th_design - lo_b)/(hi_b - lo_b); key = {tuple(np.round(r, 6)): i for i, r in enumerate(Dn)}
+    adm_idx = [[key.get(tuple(np.round(r, 6)), -1) for r in A] for A in acc]
+    gl = np.unique(rnd(th_design[:, 0])); fold_ids = folds if folds is not None else list(range(len(th)))
+    g_true = rnd(th[fold_ids, 0]); cls = []
+    for k, A in enumerate(acc):
+        if len(A) == 0: cls.append({"in_set": False, "mode": None, "nearest": None}); continue
+        ga = rnd(lo_b[0] + A[:, 0]*(hi_b[0] - lo_b[0])); cnt = {float(g): int(np.sum(ga == g)) for g in np.unique(ga)}   # back to Mb
+        mode = max(cnt, key=lambda g: (cnt[g], -abs(g - np.median(ga))))        # most admissible conditions; ties -> nearest the median
+        nearest = float(gl[np.argmin(np.abs(gl - np.median(ga)))])              # genome level nearest the region median
+        cls.append({"in_set": bool(g_true[k] in cnt), "mode": mode, "nearest": nearest, "counts": cnt})
+    g_in = float(np.mean([c["in_set"] for c in cls])); g_mode = float(np.mean([c["mode"] == g_true[k] for k, c in enumerate(cls)]))
+    g_near = float(np.mean([c["nearest"] == g_true[k] for k, c in enumerate(cls)])); chance = 1.0/len(gl)
     res["design_summary"] = {"n_conditions": int(len(th_design)), "n_genomes": int(n_gen_all), "n_media": int(n_med_all),
                              "admissible_conditions": n_adm.tolist(), "distinct_genomes": n_gen.tolist(), "distinct_media": n_med.tolist(),
-                             "genome_identified_frac": float(np.mean(n_gen == 1)), "medium_identified_frac": float(np.mean(n_med == 1))}
+                             "genome_identified_frac": float(np.mean(n_gen == 1)), "medium_identified_frac": float(np.mean(n_med == 1)),
+                             "admissible_idx": adm_idx, "genome_true": g_true.tolist(), "genome_classification": cls,
+                             "genome_in_set": g_in, "genome_mode_correct": g_mode, "genome_nearest_correct": g_near, "genome_chance": chance}
+    say(f"  genome of the held-out curve: in the admissible set in {g_in:.2f} of folds; the genome with most admissible conditions "
+        f"is the true one in {g_mode:.2f}; the level nearest the region median is the true one in {g_near:.2f} (chance {chance:.2f})")
     say(f"  admissible conditions per held-out curve: median {np.median(n_adm):.0f} of {len(th_design)} (range {n_adm.min()}-{n_adm.max()}); "
         f"distinct genomes: median {np.median(n_gen):.0f} of {n_gen_all}; distinct media: median {np.median(n_med):.0f} of {n_med_all}")
     say(f"  genome uniquely identified in {np.mean(n_gen == 1):.2f} of folds, medium uniquely identified in {np.mean(n_med == 1):.2f}")

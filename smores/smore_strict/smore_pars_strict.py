@@ -528,10 +528,20 @@ def _run_fold(arg):
                  seeds[rng.choice(len(seeds), min(len(seeds), 10*nw), replace=False)]
             n_steps = int(min(_G["mcmc_max_steps"], max(50, np.ceil(_G["mcmc_total"]/len(W0)))))
             cov = np.cov(seeds.T) + 1e-6*np.eye(d) if len(seeds) > d else None
-            Sx, rate = _hit_and_run(W0, violation, n_steps, rng, cov=cov)
-            if burn: Sx = Sx[n_steps//2:]                       # annealed starting points are not uniform: drop burn-in
-            info.update(mcmc_steps=n_steps, mcmc_rate=float(rate), rhat_max=_rhat(Sx), n_walkers=int(len(W0)))
-            A = np.concatenate([A, Sx.reshape(-1, d)])
+            # Run the chains in rounds and extend them until the split R-hat of the second half of the chain is
+            # at or below the target, or the step cap is reached.  The sample is always the second half of the
+            # whole chain, so the starting points (annealed or not) never enter it.
+            chunks, rates, W, steps, target = [], [], W0, 0, _G["rhat_target"]
+            while True:
+                Sx, rate = _hit_and_run(W, violation, n_steps, rng, cov=cov)
+                chunks.append(Sx); rates.append(rate); steps += n_steps; W = Sx[-1]
+                S_all = np.concatenate(chunks); S_half = S_all[len(S_all)//2:]
+                rh = _rhat(S_half)
+                if rh <= target or steps >= _G["mcmc_max_steps"]: break
+                n_steps = int(min(2*n_steps, _G["mcmc_max_steps"] - steps))
+            info.update(mcmc_steps=int(steps), mcmc_rate=float(np.mean(rates)), rhat_max=float(rh), n_walkers=int(len(W0)),
+                        converged=bool(rh <= target))
+            A = np.concatenate([A, S_half.reshape(-1, d)])
         if len(A) > n_keep: A = A[rng.choice(len(A), n_keep, replace=False)]
     elif sampler == "walk":                                    # v1 procedure (clipped proposals), for comparison only
         from scipy.stats import qmc
@@ -558,7 +568,7 @@ def _run_fold(arg):
 
 def jain_region(theta, fits, runs, names, bounds, n_cand=131072, seed=0, n_sd=2.0, n_walk=200, n_anneal=150, n_sample=100,
                 folds=None, procs=8, data_fits=None, sampler="qmc", n_min=300, n_cand_max=4194304, n_keep=20000,
-                mcmc_total=40000, n_walkers=20, mcmc_max_steps=2000, inverse=True, levels=None, candidates=None):
+                mcmc_total=40000, n_walkers=20, mcmc_max_steps=16000, rhat_target=1.1, inverse=True, levels=None, candidates=None):
     """Leave-one-out admissible regions.  Returns (X, accepted, info): X the sweep
     points in [0,1]^d, accepted[k] the sample of the region for fold k, info[k]
     the per-fold diagnostics.  With `levels` (one array of admissible values per
@@ -575,7 +585,7 @@ def jain_region(theta, fits, runs, names, bounds, n_cand=131072, seed=0, n_sd=2.
     n = len(runs)
     _G.clear()
     _G.update(X=X, Lt=Lt, Ut=Ut, keys=keys, n_sd=n_sd, seed=seed, sampler=sampler, n_cand=n_cand, n_min=n_min,
-              n_cand_max=n_cand_max, n_keep=n_keep, mcmc_total=mcmc_total, n_walkers=n_walkers, mcmc_max_steps=mcmc_max_steps,
+              n_cand_max=n_cand_max, n_keep=n_keep, mcmc_total=mcmc_total, n_walkers=n_walkers, mcmc_max_steps=mcmc_max_steps, rhat_target=rhat_target,
               n_walk=n_walk, n_anneal=n_anneal, n_sample=n_sample)
     if candidates is not None:                  # finite design: the region is a subset of the realisable input vectors
         _G["cands"] = (np.asarray(candidates, float) - lo)/(hi - lo)
@@ -615,7 +625,7 @@ def _r2(tru, est):
     tru, est = np.asarray(tru, float), np.asarray(est, float)
     return float(1 - ((tru - est)**2).sum()/((tru - tru.mean())**2).sum()) if len(tru) > 1 else float("nan")
 
-def summarise_region(X, accepted, names, info=None, n_sd=2.0, ref_sd=None):
+def summarise_region(X, accepted, names, info=None, n_sd=2.0, ref_sd=None, rhat_target=1.1):
     """X: true parameters of the folds in [0,1]^d (as returned by jain_region).
     Per parameter: R2 of the region median against the truth, marginal coverage of the
     central 95% of the region (over non-empty folds, and over all folds with an empty
@@ -625,8 +635,16 @@ def summarise_region(X, accepted, names, info=None, n_sd=2.0, ref_sd=None):
     which the true vector itself is admissible.  Surfaces: leave-one-out R2 of every
     interpolated bound and the share of held-out bounds within n_sd predictive SDs."""
     n = len(accepted); res = {}
-    ne = [k for k in range(n) if len(accepted[k]) >= 1]
-    ne2 = [k for k in range(n) if len(accepted[k]) >= 2]
+    # Sample-dependent statistics (region median, marginal containment, width, ridge) use only the folds whose
+    # sample is a uniform draw (quasi-random screen or a chain with split R-hat <= rhat_target).  Folds whose chain
+    # did not converge keep their sample-independent results (admissibility of the true vector, non-emptiness).
+    def _ok(k):
+        if info is None: return True
+        inf = info[k]; rh = inf.get("rhat_max", float("nan"))
+        return int(inf.get("mcmc_steps", 0) or 0) == 0 or (np.isfinite(rh) and rh <= rhat_target)
+    ok = [k for k in range(n) if _ok(k)]
+    ne = [k for k in ok if len(accepted[k]) >= 1]
+    ne2 = [k for k in ok if len(accepted[k]) >= 2]
     inv = np.array([inf["inverse_pred"] for inf in info]) if info and "inverse_pred" in info[0] else None
     for i, p in enumerate(names):
         q = {}
@@ -636,14 +654,16 @@ def summarise_region(X, accepted, names, info=None, n_sd=2.0, ref_sd=None):
             # (finite design) is handled correctly; for large continuous samples this is the usual central 95%
             hit = [np.quantile(accepted[k][:, i], .025, method="inverted_cdf") - 1e-7 <= X[k, i] <=
                    np.quantile(accepted[k][:, i], .975, method="inverted_cdf") + 1e-7 for k in ne]
-            q.update(r2_median_accepted=_r2(X[ne, i], est), coverage95=float(np.mean(hit)), coverage95_all_folds=float(np.sum(hit)/n),
+            q.update(r2_median_accepted=_r2(X[ne, i], est), coverage95=float(np.mean(hit)), coverage95_all_folds=float(np.sum(hit)/len(ok)),
                      sd_ratio=float(np.mean([accepted[k][:, i].std() for k in ne2])/(np.sqrt(1/12) if ref_sd is None else ref_sd[i])) if ne2 else float("nan"))
         else:
             q.update(r2_median_accepted=float("nan"), coverage95=float("nan"), coverage95_all_folds=0.0, sd_ratio=float("nan"))
         if inv is not None: q["r2_inverse_regression"] = _r2(X[:, i], inv[:, i])
         res[p] = q
-    out = {"per_param": res, "n_folds": n, "n_nonempty": len(ne), "frac_empty": float(1 - len(ne)/n),
-           "mean_accepted_frac": float(len(ne)/n)}
+    n_nonempty_all = sum(1 for k in range(n) if len(accepted[k]) >= 1)
+    out = {"per_param": res, "n_folds": n, "n_nonempty": n_nonempty_all, "frac_empty": float(1 - n_nonempty_all/n),
+           "mean_accepted_frac": float(n_nonempty_all/n), "n_sample_ok": len(ok), "n_nonconverged": n - len(ok),
+           "rhat_target": rhat_target}
     if info is not None:
         ta = np.array([inf["truth_admissible"] for inf in info])
         out["truth_admissible_all_folds"] = float(ta.mean())
@@ -667,6 +687,12 @@ def summarise_region(X, accepted, names, info=None, n_sd=2.0, ref_sd=None):
         out["surfaces"] = surf
         out["surfaces_dropped"] = sorted({keys[q] for inf in info for q in inf.get("surfaces_dropped", [])})
         out["sampler_info"] = [{k: v for k, v in inf.items() if k not in ("surface_loo", "keys", "library_unidentified")} for inf in info]
+        for k, inf in enumerate(out["sampler_info"]):          # per-fold region summaries, for later analysis without a rerun
+            inf["sample_ok"] = bool(_ok(k))
+            if len(accepted[k]) >= 1:
+                inf["median"] = np.median(accepted[k], axis=0).tolist()
+                inf["q025"] = np.quantile(accepted[k], .025, axis=0, method="inverted_cdf").tolist()
+                inf["q975"] = np.quantile(accepted[k], .975, axis=0, method="inverted_cdf").tolist()
     if "init_ec" in names and "keil8" in names:
         ie, k8 = names.index("init_ec"), names.index("keil8")
         out["ridge"] = {"sd_ratio_sum": float(np.mean([(accepted[k][:, ie] + accepted[k][:, k8]).std() for k in ne2]) / np.sqrt(2/12)) if ne2 else float("nan"),
@@ -679,7 +705,8 @@ def print_region(J, sub, label=""):
     if "volume_fraction" in J:
         v = J["volume_fraction"]
         print(f"  volume fraction of the box: median {v['median']:.2e} (min {v['min']:.1e}, max {v['max']:.1e}); "
-              f"found by {J['found_by']}; max R-hat {J['rhat_max_over_folds']:.3f}")
+              f"found by {J['found_by']}; max R-hat {J['rhat_max_over_folds']:.3f}; folds excluded from sample statistics "
+              f"(chain R-hat > {J.get('rhat_target', float('nan'))}): {J.get('n_nonconverged', 0)}")
     print(f"  {'param':13s} {'R2':>7s} {'cov95':>6s} {'cov95all':>8s} {'width':>6s} {'R2 inv':>7s}")
     for p in sub:
         q = J["per_param"][p]
@@ -711,6 +738,10 @@ def main():
     ap.add_argument("--sigma-mode", choices=["paper", "quadrature", "se"], default="paper")
     ap.add_argument("--sampler", choices=["qmc", "walk"], default="qmc")
     ap.add_argument("--folds", type=int, default=None)   # run only the first k folds (quick checks)
+    ap.add_argument("--thin", type=int, default=1)       # fit the SMs on every k-th frame (temporal-correlation check)
+    ap.add_argument("--rhat-target", type=float, default=1.1)
+    ap.add_argument("--mcmc-max-steps", type=int, default=16000)   # cap on hit-and-run steps per walker
+    ap.add_argument("--n-walkers", type=int, default=20)
     a = ap.parse_args()
     SIGMA_MODE = a.sigma_mode
     D = np.load(a.replicates_npz, allow_pickle=True)
@@ -720,6 +751,9 @@ def main():
     theta_all = np.array([[pmap[r][p] for p in names] for r in runs], float)
     theta = theta_all
     t = np.linspace(0, 1, Y.shape[2])
+    if a.thin > 1:                                      # keep every k-th frame, time scaled on the full window
+        keep = np.arange(0, Y.shape[2], a.thin); Y = Y[:, :, keep, :]; t = t[keep]
+        print(f"thinning: every {a.thin}-th frame, {len(keep)} frames kept", flush=True)
     nrep = np.sum(np.isfinite(Y[:, :, 0, 0]), axis=1)
     mu = np.nanmean(Y, axis=1)
     se = np.nanstd(Y, axis=1, ddof=1) / np.sqrt(nrep)[:, None, None]
@@ -747,10 +781,12 @@ def main():
     idx = [names.index(p) for p in sub]
     folds = list(range(a.folds)) if a.folds else None
     X, acc, info = jain_region(theta_all[:, idx], fits, runs, sub, bounds, n_cand=a.n_cand, procs=a.procs, n_sd=a.n_sd,
-                               sampler=a.sampler, n_min=a.n_min, n_cand_max=a.n_cand_max, folds=folds)
-    res["jain"] = summarise_region(X, acc, sub, info, n_sd=a.n_sd); res["jain"]["params"] = sub
+                               sampler=a.sampler, n_min=a.n_min, n_cand_max=a.n_cand_max, folds=folds, rhat_target=a.rhat_target,
+                               mcmc_max_steps=a.mcmc_max_steps, n_walkers=a.n_walkers)
+    res["jain"] = summarise_region(X, acc, sub, info, n_sd=a.n_sd, rhat_target=a.rhat_target); res["jain"]["params"] = sub
     res["jain"]["settings"] = {"sigma_mode": a.sigma_mode, "sampler": a.sampler, "n_sd": a.n_sd, "n_cand": a.n_cand,
-                               "n_cand_max": a.n_cand_max, "n_min": a.n_min}
+                               "n_cand_max": a.n_cand_max, "n_min": a.n_min, "thin": a.thin, "n_frames": int(Y.shape[2]),
+                               "rhat_target": a.rhat_target, "mcmc_max_steps": a.mcmc_max_steps, "n_walkers": a.n_walkers}
     print_region(res["jain"], sub)
     res["fits"] = {r: f for r, f in zip(runs, fits)}
     res["replicates_per_point"] = nrep.tolist()
