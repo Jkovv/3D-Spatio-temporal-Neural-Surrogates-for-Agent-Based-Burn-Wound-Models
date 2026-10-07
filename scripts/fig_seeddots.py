@@ -73,8 +73,8 @@ def B1():
         ax.axhline(0, color="black", lw=0.5); ax.axhline(1, color="gray", ls=":", alpha=0.4)
         ax.set_xlim(-0.6, len(F.MODELS) - 0.4)
     ylim(axes, lo, hi); axes[0].set_ylabel(r"Global $R^2$")
-    finish(fig, [Patch(fc="lightgray", ec="black", label="Near (t82-91)"),
-                 Patch(fc="lightgray", ec="black", hatch="//", label="Far (t92-100)")] + seedh(),
+    finish(fig, [Patch(fc="lightgray", ec="black", label="Early window (t82-91)"),
+                 Patch(fc="lightgray", ec="black", hatch="//", label="Late window (t92-100)")] + seedh(),
            "F2_accuracy")
 
 
@@ -93,7 +93,7 @@ def B4():
                 lo.append(a); hi.append(b)
         ax.set_xticks(x); ax.set_xticklabels(F.MODELS, fontsize=9); ax.set_title(cl, fontsize=10)
         ax.axhline(0, color="black", lw=0.5); ax.set_xlim(-0.6, len(F.MODELS) - 0.4)
-    ylim(axes, lo, hi); axes[0].set_ylabel("Score (near)")
+    ylim(axes, lo, hi); axes[0].set_ylabel("Score (early window)")
     finish(fig, [Patch(fc="lightgray", ec="black", hatch=h, label=l) for _, l, h in mets] + seedh(),
            "F2_metrics")
 
@@ -114,7 +114,7 @@ def E4():
                 lo.append(a); hi.append(b)
         ax.set_xticks(x); ax.set_xticklabels([l for _, l in planes]); ax.set_title(cl, fontsize=10)
         ax.axhline(0, color="black", lw=0.5); ax.set_xlim(-0.6, len(planes) - 0.4)
-    ylim(axes, lo, hi); axes[0].set_ylabel(r"Slice $R^2$ (near)")
+    ylim(axes, lo, hi); axes[0].set_ylabel(r"Slice $R^2$ (early window)")
     finish(fig, [Patch(fc=F.COL[m], ec="black", label=m) for m in F.MODELS] + seedh(),
            "F3_midplane_r2")
 

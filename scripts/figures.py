@@ -9,21 +9,21 @@ Two model families:
     DeepONet (gated trunk)  -> models/deeponet_3d/res_<cyt>_run_0062_50_<seed>.json
     U-Net (3D conv)         -> models/unet_3d/res_<cyt>_run_0062_50_<seed>.json
 
-Calibration (Sobol + SMoRe ParS) reads <sweep-root>/results/ (default:
-smores/results/): sobol_repmean.json, smore_pars_strict.json.
+Calibration (Sobol + SMoRe ParS): smore_main.json is read from smores/results_v3/ when it
+exists (the results of the manuscript), sobol_repmean.json from smores/results/.
 
 FIGURE GROUPS (select with --figs):
   Surrogate (chart, read JSON only):
-    B1 -> F_accuracy      grouped Global R2 (Near/Far), error bars over seeds
-    B4 -> F_metrics       SSIM / Dice / Corr (near) per model x cytokine
-    B3 -> F_speedup       inference speed-up vs ABM (needs ABM_RUNTIME_S[50])
-    E4 -> F_midplane_r2   R2 on xy/xz/yz mid-planes (near)
+    B1 -> F_accuracy      grouped Global R2 (early/late test window), error bars over seeds
+    B4 -> F_metrics       SSIM / Dice / Corr (early window) per model x cytokine
+    B3 -> F_speedup       runtime ratio ABM / inference (needs ABM_RUNTIME_S[50])
+    E4 -> F_midplane_r2   R2 on xy/xz/yz mid-planes (early window)
   Surrogate (field, need preprocessed + weights):
     S  -> F_concentrations  six-cytokine mean trajectories, split shaded
     A  -> F_eda_slices      xy/xz/yz mid-plane slices, IL-8 vs IL-10 (GT)
     E  -> F_recon_slices    GT / Pred / |diff| slices, DeepONet, both cytokines
           F_diff_models     cross-model |diff| slices, DeepONet vs U-Net
-  Calibration (chart, read smores/results/ only):
+  Calibration (chart, read smores/results_v3/ and smores/results/):
     K1 -> F4_sobol          Sobol S_T on volume-averaged replicate means
     K3 -> F5_smore_regions  sensitivity vs recovery + admissible-region widths
 
@@ -89,8 +89,8 @@ FIGDIR      = Path("./figures_3d")
 CYT_INDEX = {"il8": 0, "il1": 1, "il6": 2, "il10": 3, "tnf": 4, "tgf": 5}
 CYT_ALL = [("il8", "IL-8"), ("il1", r"IL-1$\beta$"), ("il6", "IL-6"),
            ("il10", "IL-10"), ("tnf", r"TNF-$\alpha$"), ("tgf", r"TGF-$\beta$")]
-SPLIT_SPANS = {"Train": (0, 72), "Val": (72, 82), "Near": (82, 91), "Far": (91, 101)}
-SPLIT_COL   = {"Train": "green", "Val": "orange", "Near": "dodgerblue", "Far": "red"}
+SPLIT_SPANS = {"Train": (0, 72), "Val": (72, 82), "Test, early": (82, 91), "Test, late": (91, 101)}
+SPLIT_COL   = {"Train": "green", "Val": "orange", "Test, early": "dodgerblue", "Test, late": "red"}
 
 
 def setup():
@@ -195,7 +195,7 @@ def time_seeds(model, cyt, field):
 
 #  SURROGATE CHART FIGURES
 def figB1():
-    """Global R2 (Near & Far) grouped bars, error bars over seeds."""
+    """Global R2 (early & late test window) grouped bars, error bars over seeds."""
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.0), sharey=True)
     all_lo, all_hi = [], []
     for ax, (cyt, cl) in zip(axes, CYTS):
@@ -225,8 +225,8 @@ def figB1():
     for ax in axes:
         ax.set_ylim(ylo, max(1.15, hi + 0.12))
     axes[0].set_ylabel(r"Global $R^2$")
-    handles = [Patch(fc="lightgray", ec="black", hatch="", label="Near (t82-91)"),
-               Patch(fc="lightgray", ec="black", hatch="//", label="Far (t92-100)")]
+    handles = [Patch(fc="lightgray", ec="black", hatch="", label="Early window (t82-91)"),
+               Patch(fc="lightgray", ec="black", hatch="//", label="Late window (t92-100)")]
     fig.legend(handles=handles, loc="lower center", ncol=2, fontsize=8,
                bbox_to_anchor=(0.5, -0.08))
     fig.text(0.5, -0.14, f"Error bars: $\\pm$1 s.d. over seeds {SEEDS}.",
@@ -236,7 +236,7 @@ def figB1():
 
 
 def figB4():
-    """SSIM / Dice / Corr (near) grouped bars."""
+    """SSIM / Dice / Corr (early window) grouped bars."""
     mets = [("SSIM", "SSIM"), ("Avg_Dice", "Dice"), ("Spatial_Correlation", "Corr")]
     hatches = ["", "//", ".."]
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.0), sharey=True)
@@ -256,7 +256,7 @@ def figB4():
         ax.set_xticks(x); ax.set_xticklabels(MODELS, fontsize=9)
         ax.set_title(cl, fontsize=10); ax.axhline(0, color="black", lw=0.5)
         ax.set_ylim(0, 1.18); ax.set_xlim(-0.6, len(MODELS) - 0.4)
-    axes[0].set_ylabel("Score (near)")
+    axes[0].set_ylabel("Score (early window)")
     handles = [Patch(fc="lightgray", ec="black", hatch=hatches[j], label=mets[j][1])
                for j in range(len(mets))]
     fig.legend(handles=handles, loc="lower center", ncol=3, fontsize=8,
@@ -266,7 +266,7 @@ def figB4():
 
 
 def figB3():
-    """Inference speed-up vs ABM (log y)."""
+    """Runtime ratio: one ABM trajectory / one field read-out (log y)."""
     abm = ABM_RUNTIME_S.get(GRID)
     if abm is None:
         print("    [B3] no ABM runtime set; skipping."); return
@@ -288,7 +288,7 @@ def figB3():
     ax.set_xticks(x); ax.set_xticklabels(labels, fontsize=7)
     ax.set_xlim(-0.6, len(labels) - 0.4)
     ax.set_ylim(top=max(v + e for v, e in zip(vals, errs)) * 4)
-    ax.set_ylabel(r"Inference speed-up vs ABM ($\times$)")
+    ax.set_ylabel("ABM time / inference time")
     for xi, v, e in zip(x, vals, errs):
         elbl = f"\\,$\\pm$\\,{e:.0f}"      # always show, even if 0
         ax.text(xi, (v + e) * 1.25, f"{v:.0f}$\\times${elbl}", ha="center",
@@ -298,7 +298,7 @@ def figB3():
 
 
 def figE4():
-    """R2 on xy/xz/yz mid-planes (near), grouped bars."""
+    """R2 on xy/xz/yz mid-planes (early window), grouped bars."""
     planes = [("xy_midplane_z", "xy"), ("xz_midplane_y", "xz"), ("yz_midplane_x", "yz")]
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.2), sharey=True)
     all_lo, all_hi = [], []
@@ -329,7 +329,7 @@ def figE4():
     ylo = min(-0.15, lo - 0.12) if lo < 0 else 0
     for ax in axes:
         ax.set_ylim(ylo, max(1.15, hi + 0.12))
-    axes[0].set_ylabel(r"Slice $R^2$ (near, mean over seeds)")
+    axes[0].set_ylabel(r"Slice $R^2$ (early window, mean over seeds)")
     handles = [Patch(fc=COL[m], ec="black", label=m) for m in MODELS]
     fig.legend(handles=handles, loc="lower center", ncol=2, fontsize=8,
                bbox_to_anchor=(0.5, -0.04))
@@ -338,13 +338,14 @@ def figE4():
 
 
 #  CALIBRATION CHART FIGURES  (SMoRe ParS, Jain 2022 / Bergman 2024)
-# All read smores/results/ only:
-#   sobol_repmean.json                      Sobol on volume-averaged replicate means
-#   smore_pars_strict.json                  SMoRe ParS on the ABM
+#   sobol_repmean.json                      Sobol on volume-averaged replicate means (smores/results/)
+#   smore_main.json                         SMoRe ParS on the ABM (smores/results_v3/, the manuscript version)
 def _res(name):
-    for base in (SWEEP_ROOT / "results", SWEEP_ROOT, Path(".")):
+    # results_v3 (the manuscript version) first, then results; works with --sweep-root smores or smores/results
+    for base in (SWEEP_ROOT / "results_v3", SWEEP_ROOT.parent / "results_v3", SWEEP_ROOT / "results", SWEEP_ROOT, Path(".")):
         p = base / name
         if p.exists():
+            print(f"    reading {p}")
             return p
     raise FileNotFoundError(f"{name} not found under {SWEEP_ROOT}/results")
 
@@ -404,7 +405,7 @@ def _sobol_st_max():
 
 def figK3():
     """Fig 7: per-cytokine sensitivity vs recovery (region median filled, reference regression open),
-    and admissible-region width per parameter, from results/smore_main.json."""
+    and admissible-region width per parameter, from results_v3/smore_main.json."""
     _, st = _sobol_st()
     stmax = _sobol_st_max()
     J = json.load(open(_res("smore_main.json")))["jain"]
