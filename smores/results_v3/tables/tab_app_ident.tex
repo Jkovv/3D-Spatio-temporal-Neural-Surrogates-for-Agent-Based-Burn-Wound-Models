@@ -1,0 +1,26 @@
+\begin{table}[h]
+\centering\footnotesize
+\caption{SMoRe ParS under five settings, leave-one-out over the sweep points: $R^2$ of the region median, with marginal containment in parentheses. Main: ten parameters, all 101 frames, bounds widened by two Gaussian-process standard deviations, replicate standard error as the SM uncertainty (IL-8: fit residual). Every 5th frame: as Main, with the SMs fitted to 21 of the 101 frames. Quadrature: SM misfit added in quadrature to the replicate standard error for every cytokine. Top five: only the five parameters with the highest Sobol index inferred. One SD: bounds widened by one standard deviation; the regions are then so small that the sampler cannot describe them reliably, and only non-emptiness and the admissibility of the true vector are reported.}
+\label{tab:app_ident}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Parameter} & \textbf{Main} & \textbf{Every 5th frame} & \textbf{Quadrature} & \textbf{Top five} & \textbf{One SD} \\
+\midrule
+keil8 & $+0.497$ ($0.94$) & $+0.490$ ($0.94$) & $+0.491$ ($0.95$) & $+0.454$ ($0.96$) & -- \\
+km1il6 & $+0.737$ ($0.95$) & $+0.590$ ($0.96$) & $+0.529$ ($0.96$) & $+0.695$ ($0.96$) & -- \\
+km2il10 & $+0.691$ ($0.96$) & $+0.591$ ($0.96$) & $+0.585$ ($0.96$) & $+0.659$ ($0.98$) & -- \\
+km2tgf & $+0.720$ ($0.96$) & $+0.670$ ($0.97$) & $+0.724$ ($0.98$) & -- & -- \\
+lnril8 & $-0.087$ ($0.94$) & $-0.035$ ($0.95$) & $-0.012$ ($0.95$) & -- & -- \\
+sigmoidb & $+0.881$ ($0.98$) & $+0.846$ ($0.99$) & $+0.837$ ($0.99$) & $+0.834$ ($0.95$) & -- \\
+init\_ec & $+0.503$ ($0.94$) & $+0.496$ ($0.94$) & $+0.502$ ($0.95$) & $+0.492$ ($0.96$) & -- \\
+init\_n & $+0.075$ ($0.98$) & $+0.075$ ($0.96$) & $+0.069$ ($0.96$) & -- & -- \\
+init\_m & $+0.113$ ($0.95$) & $+0.099$ ($0.93$) & $+0.054$ ($0.95$) & -- & -- \\
+init\_f & $+0.012$ ($0.83$) & $-0.021$ ($0.84$) & $-0.031$ ($0.84$) & -- & -- \\
+\midrule
+Non-empty folds & $99$ & $100$ & $100$ & $95$ & $90$ \\
+True vector admissible & $84\%$ & $97\%$ & $99\%$ & $88\%$ & $35\%$ \\
+Region volume ($10^{-4}$ of the box) & $1.9$ & $4.6$ & $6.3$ & $6.1$ & $0.1$ \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -2,7 +2,7 @@
 so that no number in the manuscript is typed by hand.  Also writes numbers.txt: every number
 quoted in the text, with the file and key it comes from.
 
-usage:  python smore_strict/make_tables.py --results results --sobol results/sobol_repmean.json
+usage:  python smore_strict/make_tables.py --results results_v3 --sobol results/sobol_repmean.json --ecoli-npz results_v3/ecoli_arrays.npz
 output: <results>/tables/*.tex and <results>/tables/numbers.txt
 Missing result files are skipped with a message.
 """
@@ -10,8 +10,9 @@ import json, os, sys, argparse
 import numpy as np
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--results", default="results")
+ap.add_argument("--results", default="results_v3")
 ap.add_argument("--sobol", default="results/sobol_repmean.json")
+ap.add_argument("--ecoli-npz", default=None)   # optional: measurement window per strain, from the cached curves
 a = ap.parse_args()
 OUT = os.path.join(a.results, "tables"); os.makedirs(OUT, exist_ok=True)
 NUM = []                                                   # (text, value, source)
@@ -71,16 +72,16 @@ if main:
                      f"{('$%.3f$' % ST_max[p]) if p in ST_max else '--'} & {r2(J['per_param'][p]['r2_median_accepted'])} & "
                      f"{r2(J['per_param'][p].get('r2_inverse_regression'))} & {f2(J['per_param'][p]['coverage95'])} & {f2(J['per_param'][p]['sd_ratio'])} \\\\"
                      for p in order)
-    rg = J.get("ridge", {})
+    rg = J.get("ridge", {}); n_chain = sum(1 for i in J["sampler_info"] if (i.get("mcmc_steps") or 0) > 0)
     exc = {k[:-3]: v["library_unidentified"] for k, v in J["surfaces"].items() if k.endswith("_lo") and v["library_unidentified"] > 0}
     write("tab_recovery.tex", f"""\\begin{{table}}[!htbp]
-\\caption{{SMoRe ParS inference, leave-one-out over the {J['n_folds']} sweep points, all ten parameters inferred jointly. $S_T$: Sobol total-order index, mean over the 24 observables and maximum over cytokines (Table~\\ref{{tab:sobol_per_cytokine}}). $R^2$: median of the admissible region against the true value. Inverse $R^2$: model-free reference, a Gaussian-process regression from the fitted SM parameters to each ABM parameter. Coverage: share of non-empty folds in which the central 95\\% of the region contains the true value. Width: standard deviation of the region divided by that of a uniform distribution over the sweep range (1 = whole range). The region is non-empty in {J['n_nonempty']} folds; the true parameter vector lies in the region in {100*J['truth_admissible_all_folds']:.0f}\\% of all folds.}}
+\\caption{{SMoRe ParS inference, leave-one-out over the {J['n_folds']} sweep points, all ten parameters inferred jointly. $S_T$: Sobol total-order index, mean over the 24 observables and maximum over cytokines (Table~\\ref{{tab:sobol_per_cytokine}}). $R^2$: median of the admissible region against the true value. Inverse $R^2$: model-free reference, a Gaussian-process regression from the fitted SM parameters to each ABM parameter. Containment: share of folds in which the central 95\\% of the region contains the true value. Width: standard deviation of the region divided by that of a uniform distribution over the sweep range (1 = whole range). The region is non-empty in {J['n_nonempty']} folds; the true parameter vector is admissible in {100*J['truth_admissible_all_folds']:.0f}\\% of all folds. {n_chain} regions were too small for the quasi-random screen and were completed by hit-and-run chains, all with split $\\hat R \\le {J.get('rhat_target', 1.1)}$ (maximum ${J['rhat_max_over_folds']:.3f}$).}}
 \\label{{tab:recovery}}
 \\centering\\footnotesize
 \\setlength{{\\tabcolsep}}{{5pt}}
 \\begin{{tabular}}{{lcccccc}}
 \\toprule
-\\textbf{{Parameter}} & $\\mathbf{{S_T}}$ & $\\mathbf{{\\max_c S_T}}$ & $\\mathbf{{R^2}}$ & \\textbf{{Inverse }}$\\mathbf{{R^2}}$ & \\textbf{{Coverage}} & \\textbf{{Width}} \\\\
+\\textbf{{Parameter}} & $\\mathbf{{S_T}}$ & $\\mathbf{{\\max_c S_T}}$ & $\\mathbf{{R^2}}$ & \\textbf{{Inverse }}$\\mathbf{{R^2}}$ & \\textbf{{Containment}} & \\textbf{{Width}} \\\\
 \\midrule
 {rows}
 \\bottomrule
@@ -98,28 +99,31 @@ if main:
     note("main: held-out bounds within the 2 SD band, median (min)", f"{np.nanmedian(w):.2f} ({np.nanmin(w):.2f})", "smore_main.json jain.surfaces[*].within_nsd")
     note("main: folds that needed the hit-and-run fallback", str(sum(1 for i in J["sampler_info"] if i.get("mcmc_steps", 0) > 0)), "smore_main.json jain.sampler_info")
     note("main: max R-hat over folds", f"{J['rhat_max_over_folds']}", "smore_main.json jain.rhat_max_over_folds")
+    note("main: folds excluded from sample statistics (chain not converged)", str(J.get("n_nonconverged", "n/a")), "smore_main.json jain.n_nonconverged")
     note("main: Bergman pointwise acceptance, share of folds with no accepted sweep point", f"{main['frac_empty']:.2f}", "smore_main.json frac_empty")
     for p in order:
         q = J["per_param"][p]
-        note(f"main {p}: R2 region / R2 inverse / coverage / width", f"{q['r2_median_accepted']:+.3f} / {q.get('r2_inverse_regression', np.nan):+.3f} / {q['coverage95']:.2f} / {q['sd_ratio']:.2f}", "smore_main.json jain.per_param")
+        note(f"main {p}: R2 region / R2 inverse / containment / width", f"{q['r2_median_accepted']:+.3f} / {q.get('r2_inverse_regression', np.nan):+.3f} / {q['coverage95']:.2f} / {q['sd_ratio']:.2f}", "smore_main.json jain.per_param")
 
 # ---------------------------------------------------------------- appendix: variants
-var = [(n, load(f)) for n, f in (("Main", "smore_main.json"), ("Top five", "smore_top5.json"), ("One SD", "smore_nsd1.json"), ("Quadrature", "smore_quadrature.json"))]
+var = [(n, load(f)) for n, f in (("Main", "smore_main.json"), ("Every 5th frame", "smore_main_thin5.json"), ("Quadrature", "smore_quadrature.json"),
+                                 ("Top five", "smore_top5.json"), ("One SD", "smore_nsd1.json"))]
 var = [(n, d["jain"]) for n, d in var if d]
 if var:
     P = var[0][1]["params"]
-    def cell(J, p):
-        if p not in J["params"]: return "--"
+    def cell(n, J, p):
+        if p not in J["params"] or n == "One SD": return "--"          # one SD: only containment of the true vector is read
         q = J["per_param"][p]; return f"{r2(q['r2_median_accepted'])} (${q['coverage95']:.2f}$)"
-    rows = "\n".join(f"{tex(p)} & " + " & ".join(cell(J, p) for _, J in var) + " \\\\" for p in P)
+    rows = "\n".join(f"{tex(p)} & " + " & ".join(cell(n, J, p) for n, J in var) + " \\\\" for p in P)
     hdr_var = " & ".join("\\textbf{" + n + "}" for n, _ in var)
     tail = ("Non-empty folds & " + " & ".join(f"${J['n_nonempty']}$" for _, J in var) + " \\\\\n"
-            "True vector admissible & " + " & ".join(pct(J["truth_admissible_all_folds"]) for _, J in var) + " \\\\")
+            "True vector admissible & " + " & ".join(pct(J["truth_admissible_all_folds"]) for _, J in var) + " \\\\\n"
+            "Region volume ($10^{-4}$ of the box) & " + " & ".join(f"${J['volume_fraction']['median']*1e4:.1f}$" for _, J in var) + " \\\\")
     write("tab_app_ident.tex", f"""\\begin{{table}}[h]
 \\centering\\footnotesize
-\\caption{{SMoRe ParS under four settings, leave-one-out over the sweep points: $R^2$ of the region median, with coverage in parentheses. Main: ten parameters, bounds widened by two Gaussian-process standard deviations, replicate standard error as the SM uncertainty (IL-8: fit residual). Top five: only the five parameters with the highest Sobol index inferred. One SD: bounds widened by one standard deviation; the regions are then so small that the sampler mixes poorly, and only containment and non-emptiness should be read. Quadrature: SM misfit added in quadrature to the replicate standard error for every cytokine.}}
+\\caption{{SMoRe ParS under five settings, leave-one-out over the sweep points: $R^2$ of the region median, with marginal containment in parentheses. Main: ten parameters, all 101 frames, bounds widened by two Gaussian-process standard deviations, replicate standard error as the SM uncertainty (IL-8: fit residual). Every 5th frame: as Main, with the SMs fitted to 21 of the 101 frames. Quadrature: SM misfit added in quadrature to the replicate standard error for every cytokine. Top five: only the five parameters with the highest Sobol index inferred. One SD: bounds widened by one standard deviation; the regions are then so small that the sampler cannot describe them reliably, and only non-emptiness and the admissibility of the true vector are reported.}}
 \\label{{tab:app_ident}}
-\\setlength{{\\tabcolsep}}{{4pt}}
+\\setlength{{\\tabcolsep}}{{3pt}}
 \\begin{{tabular}}{{l{'c'*len(var)}}}
 \\toprule
 \\textbf{{Parameter}} & {hdr_var} \\\\
@@ -132,7 +136,14 @@ if var:
 \\end{{table}}
 """)
     for n, J in var:
-        note(f"variant {n}: non-empty / true vector admissible / max R-hat", f"{J['n_nonempty']}/{J['n_folds']} / {J['truth_admissible_all_folds']:.2f} / {J['rhat_max_over_folds']}", f"{n} jain")
+        note(f"variant {n}: non-empty / true vector admissible / volume fraction median / max R-hat / folds excluded (chain not converged)",
+             f"{J['n_nonempty']}/{J['n_folds']} / {J['truth_admissible_all_folds']:.2f} / {J['volume_fraction']['median']:.2e} / {J['rhat_max_over_folds']} / {J.get('n_nonconverged', 'n/a')}", f"{n} jain")
+        rg = J.get("ridge", {})
+        if rg: note(f"variant {n}: ridge width sum / difference", f"{rg.get('sd_ratio_sum', np.nan):.3f} / {rg.get('sd_ratio_difference', np.nan):.3f}", f"{n} jain.ridge")
+        if n != "One SD":
+            for p in J["params"]:
+                q = J["per_param"][p]
+                note(f"variant {n} {p}: R2 region / containment / width", f"{q['r2_median_accepted']:+.3f} / {q['coverage95']:.2f} / {q['sd_ratio']:.2f}", f"{n} jain.per_param")
 
 # ---------------------------------------------------------------- surrogate in the loop
 loops = [(s, load(f"loop_seed{s}.json")) for s in (1, 42, 100)]
@@ -186,50 +197,70 @@ if loops:
 """)
 
 # ---------------------------------------------------------------- E. coli
-real, syn, cont, quad = load("ecoli_real.json"), load("ecoli_synthetic.json"), load("ecoli_real_continuous.json"), load("ecoli_real_quadrature.json")
+real, syn, syn4, cont, quad = (load("ecoli_real.json"), load("ecoli_synthetic.json"), load("ecoli_synthetic_4strains.json"),
+                               load("ecoli_real_continuous.json"), load("ecoli_real_quadrature.json"))
 if real:
     names = real["names"]
     def col(d, p, key):
-        return d["per_param"][p].get(key, np.nan) if d else np.nan
+        return d["per_param"][p].get(key, np.nan) if d and p in d["per_param"] else np.nan
     rows = "\n".join(f"\\texttt{{{tex(p)}}} & {r2(col(real, p, 'r2_median_accepted'))} & {r2(col(real, p, 'r2_inverse_regression'))} & {f2(col(real, p, 'sd_ratio'))} & "
-                     f"{r2(col(syn, p, 'r2_median_accepted'))} & {r2(col(syn, p, 'r2_inverse_regression'))} & {f2(col(syn, p, 'sd_ratio'))} \\\\" for p in names)
+                     f"{r2(col(syn, p, 'r2_median_accepted'))} & {f2(col(syn, p, 'sd_ratio'))} & "
+                     f"{r2(col(syn4, p, 'r2_median_accepted'))} & {f2(col(syn4, p, 'sd_ratio'))} \\\\" for p in names)
     def summ(d):
-        if not d: return "--", "--", "--", "--"
+        if not d: return dict(ne="--", ta="--", nc="--", ng="--", gin="--", gmode="--", chance="--")
         ds = d.get("design_summary", {})
-        return (f"{d['n_nonempty']}/{d['n_folds']}", pct(d["truth_admissible_all_folds"]),
-                f"{np.median(ds['admissible_conditions']):.0f}/{ds['n_conditions']}" if ds else "--",
-                f"{np.median(ds['distinct_genomes']):.0f}/{ds['n_genomes']}" if ds else "--")
-    sr, ss = summ(real), summ(syn)
+        return dict(ne=f"{d['n_nonempty']}/{d['n_folds']}", ta=pct(d["truth_admissible_all_folds"]),
+                    nc=f"{np.median(ds['admissible_conditions']):.0f}/{ds['n_conditions']}" if ds else "--",
+                    ng=f"{np.median(ds['distinct_genomes']):.0f}/{ds['n_genomes']}" if ds else "--",
+                    gin=pct(ds.get("genome_in_set", np.nan)) if ds else "--", gmode=pct(ds.get("genome_mode_correct", np.nan)) if ds else "--",
+                    chance=pct(ds.get("genome_chance", np.nan)) if ds else "--")
+    S = {k: summ(d) for k, d in (("real", real), ("syn", syn), ("syn4", syn4))}
     act = (f"plateau $\\leftarrow$ \\texttt{{{tex(syn['synthetic']['plateau'])}}}, rate $\\leftarrow$ \\texttt{{{tex(syn['synthetic']['rate'])}}}, "
            f"midpoint $\\leftarrow$ \\texttt{{{tex(syn['synthetic']['midpoint'])}}}") if syn else "--"
     pairs = ", ".join(f"\\texttt{{{tex(x)}}}/\\texttt{{{tex(y)}}} ($r={c:.2f}$)" for x, y, c in real["design"]["correlated_pairs"])
+    line = lambda key, lbl: f"{lbl}: " + ", ".join(f"{S[k][key]} ({n})" for k, n in (("real", "real"), ("syn", "control, five strains"), ("syn4", "control, four strains")))
     write("tab_external.tex", f"""\\begin{{table}}[!htbp]
-\\caption{{SMoRe ParS on the external \\textit{{Escherichia coli}} sweep~\\cite{{gongying2025}}, leave-one-out over the {real['n_conditions']} growing conditions, admissible region evaluated on the {real['design_summary']['n_conditions']} conditions of the experimental design. Real: the measured curves. Control: the same design, replicate noise and missing readings, with curves generated from a known dependence ({act}), each spanning the 5--95\\% range of the real values. $R^2$, inverse $R^2$, width as in Table~\\ref{{tab:recovery}} (width relative to the spread of the input over the design). In the design {pairs} vary together, so they can only be recovered jointly. Non-empty regions: {sr[0]} (real), {ss[0]} (control); true condition admissible: {sr[1]}, {ss[1]}; median number of admissible conditions: {sr[2]}, {ss[2]}; median number of genomes among them: {sr[3]}, {ss[3]}.}}
+\\caption{{SMoRe ParS on the external \\textit{{Escherichia coli}} sweep~\\cite{{gongying2025}}, leave-one-out over the growing conditions, admissible region evaluated on the conditions of the experimental design. Real: the measured curves. Control: the same design, replicate noise and missing readings, with curves generated from a known dependence ({act}), each spanning the 5--95\\% range of the real values; in the four-strain control the 4.63\\,Mb strain, whose readings end at 24\\,h, is left out. $R^2$, inverse $R^2$ and width as in Table~\\ref{{tab:recovery}} (width relative to the spread of the input over the design). In the design {pairs} vary together, so they can only be recovered jointly. {line('ne', 'Non-empty regions')}. {line('ta', 'True condition admissible')}. {line('nc', 'Median number of admissible conditions')}. {line('gin', 'True genome among the admissible conditions')}. {line('gmode', 'Genome with the most admissible conditions is the true one')}; chance level {S['real']['chance']} with five strains, {S['syn4']['chance']} with four.}}
 \\label{{tab:external}}
 \\centering\\footnotesize
-\\setlength{{\\tabcolsep}}{{4pt}}
-\\begin{{tabular}}{{lcccccc}}
+\\setlength{{\\tabcolsep}}{{3pt}}
+\\begin{{tabular}}{{lccccccc}}
 \\toprule
- & \\multicolumn{{3}}{{c}}{{\\textbf{{Real curves}}}} & \\multicolumn{{3}}{{c}}{{\\textbf{{Positive control}}}} \\\\
-\\cmidrule(lr){{2-4}}\\cmidrule(lr){{5-7}}
-\\textbf{{Input}} & $\\mathbf{{R^2}}$ & \\textbf{{Inv. }}$\\mathbf{{R^2}}$ & \\textbf{{Width}} & $\\mathbf{{R^2}}$ & \\textbf{{Inv. }}$\\mathbf{{R^2}}$ & \\textbf{{Width}} \\\\
+ & \\multicolumn{{3}}{{c}}{{\\textbf{{Real curves}}}} & \\multicolumn{{2}}{{c}}{{\\textbf{{Control, five strains}}}} & \\multicolumn{{2}}{{c}}{{\\textbf{{Control, four strains}}}} \\\\
+\\cmidrule(lr){{2-4}}\\cmidrule(lr){{5-6}}\\cmidrule(lr){{7-8}}
+\\textbf{{Input}} & $\\mathbf{{R^2}}$ & \\textbf{{Inv. }}$\\mathbf{{R^2}}$ & \\textbf{{Width}} & $\\mathbf{{R^2}}$ & \\textbf{{Width}} & $\\mathbf{{R^2}}$ & \\textbf{{Width}} \\\\
 \\midrule
 {rows}
 \\bottomrule
 \\end{{tabular}}
 \\end{{table}}
 """)
-    for lbl, d in (("real", real), ("control", syn), ("real, continuous box", cont), ("real, quadrature", quad)):
+    for lbl, d in (("real", real), ("control, five strains", syn), ("control, four strains", syn4), ("real, continuous box", cont), ("real, quadrature", quad)):
         if not d: continue
         ds = d.get("design_summary")
         note(f"E. coli {lbl}: non-empty / true condition admissible / volume fraction median",
              f"{d['n_nonempty']}/{d['n_folds']} / {d['truth_admissible_all_folds']:.2f} / {d['volume_fraction']['median']:.3f}", f"ecoli ({lbl}) top level")
-        if ds: note(f"E. coli {lbl}: median admissible conditions / genomes / media; genome identified share",
-                    f"{np.median(ds['admissible_conditions']):.0f}/{ds['n_conditions']} / {np.median(ds['distinct_genomes']):.0f}/{ds['n_genomes']} / "
-                    f"{np.median(ds['distinct_media']):.0f}/{ds['n_media']}; {ds['genome_identified_frac']:.2f}", f"ecoli ({lbl}) design_summary")
+        if ds:
+            note(f"E. coli {lbl}: median admissible conditions / genomes / media; genome identified share",
+                 f"{np.median(ds['admissible_conditions']):.0f}/{ds['n_conditions']} / {np.median(ds['distinct_genomes']):.0f}/{ds['n_genomes']} / "
+                 f"{np.median(ds['distinct_media']):.0f}/{ds['n_media']}; {ds['genome_identified_frac']:.2f}", f"ecoli ({lbl}) design_summary")
+            if "genome_in_set" in ds:
+                note(f"E. coli {lbl}: genome in admissible set / most-admissible genome correct / nearest-to-median genome correct / chance",
+                     f"{ds['genome_in_set']:.2f} / {ds['genome_mode_correct']:.2f} / {ds['genome_nearest_correct']:.2f} / {ds['genome_chance']:.2f}", f"ecoli ({lbl}) design_summary")
         s = d["surfaces"]; w = np.array([v["within_nsd"] for v in s.values()], float); r = np.array([v["loo_r2"] for v in s.values()], float)
         note(f"E. coli {lbl}: held-out bounds within the 2 SD band, median / surfaces LOO R2 median", f"{np.nanmedian(w):.2f} / {np.nanmedian(r):.2f}", f"ecoli ({lbl}) surfaces")
+        for p in names:
+            q = d["per_param"][p]
+            note(f"E. coli {lbl} {p}: R2 region / R2 inverse / containment / width",
+                 f"{q['r2_median_accepted']:+.3f} / {q.get('r2_inverse_regression', np.nan):+.3f} / {q['coverage95']:.2f} / {q['sd_ratio']:.2f}", f"ecoli ({lbl}) per_param")
+        if d.get("synthetic", {}).get("unidentified_by_genome"):
+            note(f"E. coli {lbl}: unidentified SM parameters per genome (conditions)", str(d["synthetic"]["unidentified_by_genome"]), f"ecoli ({lbl}) synthetic.unidentified_by_genome")
     note("E. coli: logistic SM median R2 on replicate means / below 0.9", f"{np.median(real['sm_r2']):.3f} / {sum(v < 0.9 for v in real['sm_r2'])}", "ecoli_real.json sm_r2")
+    if a.ecoli_npz and os.path.exists(a.ecoli_npz):
+        Z = np.load(a.ecoli_npz, allow_pickle=True); th, Y, tg = Z["theta"], Z["Y"], Z["t_grid"]; gc = [str(n) for n in Z["names"]].index("genome_Mb")
+        for g in np.unique(th[:, gc]):
+            last = [int(np.max(np.where(np.isfinite(y))[0])) for y in Y[th[:, gc] == g]]
+            note(f"E. coli data: genome {g:.2f} Mb, last reading (median over curves), hours", f"{tg[int(np.median(last))]:.1f} of {tg[-1]:.1f}", a.ecoli_npz)
 
 with open(os.path.join(OUT, "numbers.txt"), "w") as fh:
     for t, v, src in NUM: fh.write(f"{t}: {v}    [{src}]\n")

@@ -1,0 +1,22 @@
+\begin{table}[!htbp]
+\caption{SMoRe ParS inference, leave-one-out over the 100 sweep points, all ten parameters inferred jointly. $S_T$: Sobol total-order index, mean over the 24 observables and maximum over cytokines (Table~\ref{tab:sobol_per_cytokine}). $R^2$: median of the admissible region against the true value. Inverse $R^2$: model-free reference, a Gaussian-process regression from the fitted SM parameters to each ABM parameter. Containment: share of folds in which the central 95\% of the region contains the true value. Width: standard deviation of the region divided by that of a uniform distribution over the sweep range (1 = whole range). The region is non-empty in 99 folds; the true parameter vector is admissible in 84\% of all folds. 15 regions were too small for the quasi-random screen and were completed by hit-and-run chains, all with split $\hat R \le 1.1$ (maximum $1.095$).}
+\label{tab:recovery}
+\centering\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Parameter} & $\mathbf{S_T}$ & $\mathbf{\max_c S_T}$ & $\mathbf{R^2}$ & \textbf{Inverse }$\mathbf{R^2}$ & \textbf{Containment} & \textbf{Width} \\
+\midrule
+sigmoidb & $0.575$ & $0.976$ & $+0.881$ & $+0.927$ & $0.98$ & $0.40$ \\
+km1il6 & $0.094$ & $0.562$ & $+0.737$ & $+0.879$ & $0.95$ & $0.70$ \\
+km2il10 & $0.088$ & $0.529$ & $+0.691$ & $+0.885$ & $0.96$ & $0.68$ \\
+init\_ec & $0.087$ & $0.507$ & $+0.503$ & $+0.444$ & $0.94$ & $0.69$ \\
+keil8 & $0.087$ & $0.507$ & $+0.497$ & $+0.392$ & $0.94$ & $0.69$ \\
+km2tgf & $0.069$ & $0.416$ & $+0.720$ & $+0.832$ & $0.96$ & $0.63$ \\
+init\_n & $0.003$ & $0.010$ & $+0.075$ & $-0.250$ & $0.98$ & $0.96$ \\
+lnril8 & $0.003$ & $0.010$ & $-0.087$ & $-0.104$ & $0.94$ & $0.98$ \\
+init\_m & $0.003$ & $0.007$ & $+0.113$ & $-0.091$ & $0.95$ & $0.94$ \\
+init\_f & $0.000$ & $0.001$ & $+0.012$ & $-0.431$ & $0.83$ & $0.99$ \\
+\bottomrule
+\end{tabular}
+\end{table}

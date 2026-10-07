@@ -1,0 +1,23 @@
+\begin{table}[!htbp]
+\caption{SMoRe ParS on the external \textit{Escherichia coli} sweep~\cite{gongying2025}, leave-one-out over the growing conditions, admissible region evaluated on the conditions of the experimental design. Real: the measured curves. Control: the same design, replicate noise and missing readings, with curves generated from a known dependence (plateau $\leftarrow$ \texttt{genome\_Mb}, rate $\leftarrow$ \texttt{log\_K+}, midpoint $\leftarrow$ \texttt{log\_NH4+}), each spanning the 5--95\% range of the real values; in the four-strain control the 4.63\,Mb strain, whose readings end at 24\,h, is left out. $R^2$, inverse $R^2$ and width as in Table~\ref{tab:recovery} (width relative to the spread of the input over the design). In the design \texttt{log\_K+}/\texttt{log\_PO43-} ($r=0.97$), \texttt{log\_SO42-}/\texttt{log\_NH4+} ($r=0.99$) vary together, so they can only be recovered jointly. Non-empty regions: 118/126 (real), 122/126 (control, five strains), 98/98 (control, four strains). True condition admissible: $81\%$ (real), $82\%$ (control, five strains), $100\%$ (control, four strains). Median number of admissible conditions: 13/145 (real), 23/145 (control, five strains), 17/116 (control, four strains). True genome among the admissible conditions: $92\%$ (real), $96\%$ (control, five strains), $100\%$ (control, four strains). Genome with the most admissible conditions is the true one: $60\%$ (real), $75\%$ (control, five strains), $100\%$ (control, four strains); chance level $20\%$ with five strains, $25\%$ with four.}
+\label{tab:external}
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccccccc}
+\toprule
+ & \multicolumn{3}{c}{\textbf{Real curves}} & \multicolumn{2}{c}{\textbf{Control, five strains}} & \multicolumn{2}{c}{\textbf{Control, four strains}} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+\textbf{Input} & $\mathbf{R^2}$ & \textbf{Inv. }$\mathbf{R^2}$ & \textbf{Width} & $\mathbf{R^2}$ & \textbf{Width} & $\mathbf{R^2}$ & \textbf{Width} \\
+\midrule
+\texttt{genome\_Mb} & $+0.689$ & $+0.850$ & $0.59$ & $+0.001$ & $0.48$ & $+1.000$ & $0.00$ \\
+\texttt{log\_Thiamine} & $+0.000$ & $-0.068$ & $0.45$ & $+0.000$ & $0.84$ & $+0.000$ & $1.02$ \\
+\texttt{log\_K+} & $-0.456$ & $-0.040$ & $0.90$ & $+0.657$ & $0.65$ & $+0.939$ & $0.18$ \\
+\texttt{log\_PO43-} & $-0.499$ & $+0.041$ & $1.09$ & $+0.557$ & $0.79$ & $+0.844$ & $0.30$ \\
+\texttt{log\_Fe2+} & $-0.001$ & $+0.153$ & $0.52$ & $-0.001$ & $0.86$ & $-0.001$ & $1.03$ \\
+\texttt{log\_SO42-} & $-0.006$ & $+0.064$ & $0.61$ & $+0.744$ & $0.40$ & $+0.974$ & $0.15$ \\
+\texttt{log\_NH4+} & $-0.019$ & $+0.061$ & $0.58$ & $+0.764$ & $0.31$ & $+1.000$ & $0.00$ \\
+\texttt{log\_Mg2+} & $-0.029$ & $-0.070$ & $0.38$ & $-0.001$ & $0.93$ & $-0.029$ & $1.16$ \\
+\texttt{log\_Glucose} & $+0.005$ & $-0.100$ & $1.03$ & $-0.046$ & $0.95$ & $-0.110$ & $1.14$ \\
+\bottomrule
+\end{tabular}
+\end{table}
