@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
 # combi3D/Simulation/smore/run_calibration.py
-#
-# End-to-end SMoRe ParS calibration pipeline:
-#   1. load (theta_ABM, observable) pairs from a completed sweep
-#   2. emulator-based Sobol -> rank parameters, select top-k
-#   3. SMoRe ParS leave-one-out recovery on the top-k
-#   4. write a single results bundle
-#
-# This is the "scientifically correct order" the supervisor specified:
-# sensitivity FIRST, then calibrate only the identifiable (top-k) parameters.
 
 import argparse
 import json
@@ -44,8 +35,7 @@ def main():
     sob = emulator_sobol(theta, feats, FEATURE_NAMES, names, bounds,
                          n_saltelli=args.n_saltelli)
     if args.params:
-        # Explicit parameter set (e.g. the identifiable-by-recovery set),
-        # overriding the Sobol top-k. Validate names against the manifest.
+        # overriding the Sobol top-k
         unknown = [p for p in args.params if p not in names]
         if unknown:
             raise SystemExit(f"--params has unknown names: {unknown}")
