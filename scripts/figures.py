@@ -10,7 +10,7 @@ Two model families:
     U-Net (3D conv)         -> models/unet_3d/res_<cyt>_run_0062_50_<seed>.json
 
 Calibration (Sobol + SMoRe ParS): smore_main.json is read from smores/results_v3/ when it
-exists (the results of the manuscript), sobol_repmean.json from smores/results/.
+exists, sobol_repmean.json from smores/results/.
 
 FIGURE GROUPS (select with --figs):
   Surrogate (chart, read JSON only):
@@ -45,7 +45,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
-# config 
+# config
 RUN   = "run_0062"
 GRID  = 50
 SEEDS = [1, 42, 100]
@@ -54,9 +54,7 @@ CYTS  = [("il8", "IL-8"), ("il10", "IL-10")]
 MODELS = ["DeepONet", "U-Net"]
 MODEL_DIR = {"DeepONet": "deeponet_3d", "U-Net": "unet_3d"}
 
-# Full palette from the 2D script. In 3D only DeepONet/U-Net are used, so the
-# colours originally assigned to PI-DeepONet / STA-LSTM / PINN are free and get
-# reused for the calibration panels (kinetic vs initial-population).
+# palette from the 2D script
 P = {"DeepONet": "#ffd700", "PI-DeepONet": "#ffb14e", "U-Net": "#fa8775",
      "STA-LSTM": "#ea5f94", "PINN": "#cd34b5"}
 CC = ["#e6194b", "#f58231", "#3cb44b", "#4363d8", "#911eb4", "#42d4f4"]
@@ -65,11 +63,9 @@ COL = {"DeepONet": P["DeepONet"], "U-Net": P["U-Net"]}
 MK  = {"DeepONet": "o",       "U-Net": "s"}
 LS  = {"DeepONet": "-",       "U-Net": "-"}
 
-# Calibration panels: kinetic vs initial-population, using colours from CC
-# (blue = CC[3], red = CC[0]).
+# calibration panels: kinetic vs initial-population
 TYPE_COL = {"kinetic": CC[3], "initial": CC[0], "structural": "#2A9D8F"}
 
-# Consistent colormap for all field slices (the dark purple-to-yellow one).
 FIELD_CMAP = "magma"
 ERR_CMAP   = "inferno"
 
@@ -79,8 +75,7 @@ EBAR_KW = dict(ecolor="black", elinewidth=1.6, capthick=1.6)
 # ABM reference wall-clock for one 100h trajectory at 50^3 (run_0062 canary).
 ABM_RUNTIME_S = {50: 4984.06}
 
-# Paths. Models + preprocessed live under burns/ ; sweep + calibration under
-# burns/smores/ . Defaults assume the script is run from burns/.
+# paths relative to the repository root
 MODELS_ROOT = Path("./models")
 PREP_ROOT   = Path("./preprocessed_3d")
 SWEEP_ROOT  = Path("./smores")            # holds calibration_results_*.json + sweep/
@@ -126,9 +121,7 @@ def savef(fig, name):
 
 
 def _bar_labels(ax, xs, means, stds, fmt="{:.3f}", fs=6):
-    """Place value+/-spread labels. For positive bars, above bar top (incl std).
-    For negative bars, just ABOVE the x-axis (y slightly >0) so the text never
-    overlaps the downward bar."""
+    """value+/-spread labels: above the bar for positive bars, above the axis for negative ones"""
     for x, mu, sd in zip(xs, means, stds):
         if mu is None:
             continue
@@ -138,13 +131,12 @@ def _bar_labels(ax, xs, means, stds, fmt="{:.3f}", fs=6):
             y = mu + sd + 0.02
             va = "bottom"
         else:
-            # negative bar: label sits just above the axis line
             y = 0.02
             va = "bottom"
         ax.text(x, y, lbl, ha="center", va=va, fontsize=fs, fontweight="bold")
 
 
-# JSON metric helpers 
+# JSON metric helpers
 def load_res(model, cyt, seed):
     p = MODELS_ROOT / MODEL_DIR[model] / f"res_{cyt}_{RUN}_{GRID}_{seed}.json"
     return json.load(open(p)) if p.exists() else None
@@ -339,9 +331,9 @@ def figE4():
 
 #  CALIBRATION CHART FIGURES  (SMoRe ParS, Jain 2022 / Bergman 2024)
 #   sobol_repmean.json                      Sobol on volume-averaged replicate means (smores/results/)
-#   smore_main.json                         SMoRe ParS on the ABM (smores/results_v3/, the manuscript version)
+#   smore_main.json                         SMoRe ParS on the ABM (smores/results_v3/)
 def _res(name):
-    # results_v3 (the manuscript version) first, then results; works with --sweep-root smores or smores/results
+    # results_v3 first, then results; works with --sweep-root smores or smores/results
     for base in (SWEEP_ROOT / "results_v3", SWEEP_ROOT.parent / "results_v3", SWEEP_ROOT / "results", SWEEP_ROOT, Path(".")):
         p = base / name
         if p.exists():
@@ -522,7 +514,7 @@ def figA(frame=86):  # Y_target[i] = hour i+2 -> t = 88 h, as in 2D
                       FIELD_CMAP, cl)
     savef(fig, "F1_eda_slices")
 
-# weight-based prediction (for GT vs Pred slice figures) 
+# weight-based prediction (for GT vs Pred slice figures)
 def _load_field_deps():
     import tensorflow as tf
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"

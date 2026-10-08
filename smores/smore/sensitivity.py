@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
-# combi3D/Simulation/smore/sensitivity.py
-#
-# Emulator-based Sobol sensitivity for a SMALL sweep (PoC: ~10 runs).
-#
-# A full Saltelli Sobol design needs ~(2D+2)*N model evaluations -- thousands of
-# ABM runs, which defeats the purpose of a surrogate. Instead (per the supervisor
-# and Le Gratiet/Sudret 2016, Marino 2008):
-#   1. Fit a cheap GP emulator theta -> scalar observable on the few real runs.
-#   2. Draw a dense Saltelli sample in parameter space.
-#   3. Evaluate the EMULATOR (not the ABM) on it and run Sobol on those.
-# The resulting indices are INDICATIVE (wide CIs at N=10), used to RANK and
-# select top-k parameters -- not as final variance attributions.
+# Emulator-based Sobol sensitivity for a small sweep. A full Saltelli design
+# needs ~(2D+2)*N model evaluations, so a GP emulator theta -> scalar observable
+# is fitted on the real runs and Sobol is computed on a dense Saltelli sample of
+# the emulator (Le Gratiet/Sudret 2016, Marino 2008). The indices are used to
+# rank parameters and select the top-k.
 
 import json
 import numpy as np

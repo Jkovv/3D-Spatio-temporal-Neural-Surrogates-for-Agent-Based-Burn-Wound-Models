@@ -5,25 +5,18 @@
 #SBATCH --time=02:00:00
 #SBATCH --output=install_%j.out
 
-# ============================================================================
-# One-shot installer: miniconda + CompuCell3D (headless) + FiPy + calibration
-# deps, all under your scratch. Run ONCE. After it succeeds you never touch it
-# again -- the sweep job reuses the env it builds.
+# Installer: miniconda + CompuCell3D (headless) + FiPy + calibration deps on
+# scratch. The sweep job reuses the env it builds.
 #
 #   sbatch install_cc3d.slurm
-#   tail -f install_<jobid>.out      # watch progress
-#
-# Why a job and not the login node: conda solves + downloads are heavy and the
-# login node kills long/cpu-heavy processes. This runs it on a compute node.
-# ============================================================================
+#   tail -f install_<jobid>.out
 
 set -euo pipefail
 
-# ---- edit these two if your paths differ ----------------------------------
+# ---- paths ----------------------------------------------------------------
 SCRATCH=/gpfs/scratch1/shared/jkowalczuk
 CONDA_ROOT=$SCRATCH/miniconda3
 ENV_NAME=cc3d
-# ---------------------------------------------------------------------------
 
 echo "[install] host=$(hostname)  date=$(date)"
 echo "[install] scratch=$SCRATCH"
@@ -42,8 +35,7 @@ fi
 
 source "$CONDA_ROOT/bin/activate"
 
-# 2. CC3D env (headless: cc3d only, NOT cc3d-player5) ------------------------
-# python=3.10 matches the supervisor's working .pyc (cpython-310).
+# 2. CC3D env (headless: cc3d only, no cc3d-player5) -------------------------
 if conda env list | grep -q "^$ENV_NAME "; then
     echo "[install] env '$ENV_NAME' exists; reusing. Delete it to rebuild:"
     echo "          conda env remove -n $ENV_NAME"
@@ -59,7 +51,7 @@ conda activate "$ENV_NAME"
 echo "[install] installing FiPy + calibration packages..."
 pip install --no-input fipy scipy scikit-learn SALib
 
-# 4. smoke test: can we import everything the sim needs? ---------------------
+# 4. smoke test --------------------------------------------------------------
 echo "[install] smoke test..."
 python - <<'PYEOF'
 import importlib, sys
@@ -72,7 +64,7 @@ for m in mods:
     except Exception as e:
         bad.append((m, str(e)))
         print(f"  [FAIL] import {m}: {e}")
-# cc3d.run_script must exist (that's what the sweep calls)
+# the sweep calls cc3d.run_script
 try:
     import cc3d.run_script  # noqa
     print("  [ok]  cc3d.run_script importable")

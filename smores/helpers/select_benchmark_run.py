@@ -1,38 +1,20 @@
 #!/usr/bin/env python3
 """
-helpers/select_benchmark_run.py
+Selects the surrogate benchmark run: the most central point of the LHS
+parameter space.
 
-Proves which sweep run is the most representative (central) point in the
-LHS parameter space, so the surrogate benchmark run is chosen by a defensible
-criterion rather than arbitrarily.
-
-WHY THIS EXISTS
----------------
-The surrogate accuracy tables in the paper are computed on ONE sweep run (the
-thesis protocol: one run, seeds 1/42/100). Which run that is matters: a run
-sitting in a corner of the parameter space (e.g. near-minimal IL-10 kinetics)
-would make the surrogate look artificially worse on the sparse cytokine, not
-because of the surrogate but because that run barely has any IL-10. Choosing
-the run nearest the CENTRE of the sampled space makes the benchmark reflect
-typical dynamics.
-
-WHAT "CENTRAL" MEANS HERE
--------------------------
 Each parameter is min-max normalised to [0,1] across the sweep. A run's
-"centrality score" is the mean absolute distance of its normalised parameters
-from 0.5 (the centre). 0.0 = dead centre on every parameter; ~0.5 = extreme
-corner. The most central run has the smallest score. We also report, per run,
-how many parameters are "extreme" (normalised <0.15 or >0.85), since a low
-mean can still hide one extreme axis.
+centrality score is the mean absolute distance of its normalised parameters
+from 0.5 (0.0 = centre on every parameter, ~0.5 = corner). The number of
+"extreme" parameters (normalised <0.15 or >0.85) is also reported per run.
 
-USAGE
------
+Usage:
     python helpers/select_benchmark_run.py                 # uses seed 42, N=100
     python helpers/select_benchmark_run.py --n-runs 100 --seed 42
     python helpers/select_benchmark_run.py --manifest ../manifest.json
 
 Writes helpers/benchmark_run_justification.txt with the ranking and the chosen
-run, ready to cite in the Methods.
+run.
 """
 
 import argparse
@@ -50,7 +32,7 @@ def load_manifest(manifest_path, n_runs, seed):
     if manifest_path and Path(manifest_path).exists():
         with open(manifest_path) as f:
             return json.load(f), f"loaded {manifest_path}"
-    # regenerate the SAME manifest deterministically via setup_runs.py
+    # regenerate the same manifest via setup_runs.py
     here = Path(__file__).resolve().parent
     setup = here.parent / "setup_runs.py"
     tmp = here / "_tmp_manifest.json"
@@ -90,7 +72,7 @@ def main():
     n_extreme = ((Pn < args.extreme_lo) | (Pn > args.extreme_hi)).sum(1)
     order = np.argsort(centrality)
 
-    # Prefer the most central run that ALSO has zero extreme axes, if one
+    # Prefer the most central run that also has zero extreme axes, if one
     # exists among the top candidates; otherwise the most central overall.
     chosen = None
     for j in order:
@@ -132,13 +114,12 @@ def main():
         flag = "  <-- extreme" if (v < args.extreme_lo or v > args.extreme_hi) else ""
         emit(f"    {p:10s}: {v:.3f}{flag}")
     emit("")
-    emit("PAPER-READY JUSTIFICATION:")
+    emit("JUSTIFICATION:")
     emit(f"  The surrogate benchmark uses {names[chosen]}, the sweep point")
     emit(f"  nearest the centre of the sampled parameter space (centrality")
     emit(f"  {centrality[chosen]:.3f}, {n_extreme[chosen]} extreme parameters), so that")
     emit(f"  reported accuracy reflects typical cytokine dynamics rather than")
     emit(f"  an extreme corner of the parameter space.")
-    emit("=" * 66)
 
     out = Path(__file__).resolve().parent / "benchmark_run_justification.txt"
     out.write_text("\n".join(lines) + "\n")

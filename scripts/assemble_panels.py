@@ -18,8 +18,7 @@ LAYOUTS = {
         "width": 8.0,
         "hratios": [1.0, 1.0],
     },
-    # Fig 2 = architectures, drawn by hand. This reserves a blank, correctly-
-    # sized page so numbering and layout stay consistent with the rest.
+    # Fig 2 = architectures, drawn by hand: blank placeholder
     "_unused_fig2_placeholder": {
         "orient": "col",
         "sources": [],           # no source PNGs; emits a labelled blank panel
@@ -72,7 +71,7 @@ def _imread(path):
 def assemble(name, spec, indir, outdir, labels=True, dpi=300):
     stems = spec["sources"]
 
-    # blank reserved-space case (e.g. hand-drawn architectures figure) 
+    # blank placeholder panel
     if not stems:
         width = spec["width"]
         height = spec.get("blank_height", 5.0)
@@ -97,7 +96,6 @@ def assemble(name, spec, indir, outdir, labels=True, dpi=300):
         print(f"  [skip {name}] missing: {', '.join(p.name for p in missing)}")
         return False
 
-    # load 
     from PIL import Image, ImageDraw, ImageFont
     import numpy as _np
 
@@ -183,9 +181,7 @@ def assemble(name, spec, indir, outdir, labels=True, dpi=300):
                       fill="black", font=font)
 
     else:
-        # multi-panel: normalise to common width, add a strip + letter to each,
-        # then stack. Because every panel is the same width and the letter sits
-        # at the same pixel x, the letters line up perfectly under one another.
+        # multi-panel: common width, strip + letter on each, then stack
         if orient == "row":
             H = max(im.height for im in pil_imgs)
             scaled = [im.resize((int(im.width * H / im.height), H)) for im in pil_imgs]

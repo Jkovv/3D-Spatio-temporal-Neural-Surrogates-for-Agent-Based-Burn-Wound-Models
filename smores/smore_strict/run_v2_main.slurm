@@ -5,7 +5,7 @@
 #SBATCH --time=16:00:00
 #SBATCH --account=gisr115048
 #SBATCH --output=smore_v2_main_%j.out
-# SMoRe ParS on the ABM sweep with the corrected implementation (v2).
+# SMoRe ParS on the ABM sweep (v2).
 # Quick test first:  sbatch --export=ALL,FOLDS=3 run_v2_main.slurm   (a few minutes)
 # Full run:          sbatch run_v2_main.slurm
 set -euo pipefail

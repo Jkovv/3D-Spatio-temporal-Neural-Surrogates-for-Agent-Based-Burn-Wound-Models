@@ -1,24 +1,9 @@
 #!/usr/bin/env python3
-# combi3D/Simulation/smore/compare_observables.py
-#
-# Does the choice of observable determine what SMoRe ParS can recover?
-#
-# The recovery reported so far uses the volume-averaged concentration trajectory
-# reduced to four scalars per cytokine. That average collapses 125,000 voxels
-# into one number per frame and discards the spatial structure the 3D model
-# exists to produce. This script tests, on ABM fields only, whether keeping the
-# spatial structure changes which parameters are identifiable.
-#
-# ABM ONLY, DELIBERATELY. No surrogate is involved. The question here is whether
-# the observable is the limiting factor, independently of surrogate fidelity.
-# If spatial observables improve recovery on ABM fields, the observable choice
-# matters and the surrogate experiment should be rerun with them. If they do
-# not, the limit lies elsewhere and the surrogate run can be interpreted as it
-# stands. Both answers are informative.
-#
-# Everything downstream is unchanged: the same emulator_sobol, fit_surrogates
-# and leave_one_out_recovery are called for both observable sets, on identical
-# theta and identical runs, so the comparison isolates the observable.
+# SMoRe ParS recovery on ABM fields with two observable sets: the
+# volume-averaged trajectory (four scalars per cytokine) and the spatial
+# observables of spatial_observables.py. Both go through the same
+# emulator_sobol, fit_surrogates and leave_one_out_recovery on identical theta
+# and runs.
 #
 # Usage:
 #   python compare_observables.py \

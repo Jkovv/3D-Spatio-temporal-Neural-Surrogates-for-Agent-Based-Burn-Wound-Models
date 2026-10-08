@@ -2,9 +2,7 @@ from cc3d import CompuCellSetup
 from params_grid import nx, ny, nz, relaxationmcs
 from combi3DSteppables import endothelialSteppable, celldivisionSteppable
 
-# Record the parameter vector this run actually resolved to. This is written
-# next to the output (if SMORE_OUTDIR is set) so SMoRe ParS can pair the
-# trajectory with its theta_ABM without trusting the driver's bookkeeping.
+# write the resolved parameter vector to $SMORE_OUTDIR (if set)
 def _dump_resolved_params():
     import os, json
     outdir = os.environ.get("SMORE_OUTDIR")
@@ -53,7 +51,7 @@ def configure_simulation(nx, ny, nz, relaxationmcs):
     potts.ElementCC3D("Boundary_y", {}, "Periodic")
     potts.ElementCC3D("Boundary_z", {}, "Periodic")
 
-    # Cell types — same 10 as 2D (endothelial frozen, plus Medium)
+    # Cell types: same 10 as 2D (endothelial frozen, plus Medium)
     cell_type_plugin = xml3d.ElementCC3D("Plugin", {"Name": "CellType"})
     cell_types = [
         (0,  "Medium"),
@@ -82,7 +80,7 @@ def configure_simulation(nx, ny, nz, relaxationmcs):
     xml3d.ElementCC3D("Plugin", {"Name": "PixelTracker"})
     xml3d.ElementCC3D("Plugin", {"Name": "Volume"})
 
-    # Contact energies — Medium↔* = 10, cell↔cell = 100
+    # Contact energies: Medium-* = 10, cell-cell = 100
     contact = xml3d.ElementCC3D("Plugin", {"Name": "Contact"})
     mobile = ["neutrophil", "monocyte", "fibroblast", "neutrophila",
               "neutrophilndn", "monocyter", "macrophage1", "macrophage2",
@@ -99,12 +97,12 @@ def configure_simulation(nx, ny, nz, relaxationmcs):
 
     xml3d.ElementCC3D("Plugin", {"Name": "NeighborTracker"})
 
-    # ConnectivityGlobal — prevents cell fragmentation in 3D
+    # ConnectivityGlobal: prevents cell fragmentation in 3D
     conn = xml3d.ElementCC3D("Plugin", {"Name": "ConnectivityGlobal"})
     for tname in mobile:
         conn.ElementCC3D("Penalty", {"Type": tname}, 10000000)
 
-    # DiffusionSolverFE — zero diffusion/decay; FiPy handles PDE solving
+    # DiffusionSolverFE: zero diffusion/decay, FiPy solves the PDEs
     diff_solver = xml3d.ElementCC3D("Steppable", {"Type": "DiffusionSolverFE"})
     diff_field = diff_solver.ElementCC3D("DiffusionField", {"Name": "cytokine"})
     diff_data = diff_field.ElementCC3D("DiffusionData")

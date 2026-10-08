@@ -1,20 +1,8 @@
 #!/usr/bin/env python3
-# combi3D/Simulation/smore/smore_pars.py
-#
-# SMoRe ParS (Surrogate Modeling for Reconstructing Parameters) for the burn ABM.
-# Follows Jain et al. 2022 (single/low-dim observable) extended toward Bergman
-# et al. 2024 (multi-dimensional observable):
-#
-#   STAGE A  surrogate fit:   for each run, fit a cheap phenomenological model to
-#            its mean-concentration trajectory, giving theta_SM (surrogate params).
-#   STAGE B  mapping:         learn GP : theta_ABM -> theta_SM across runs.
-#   STAGE C  inversion/recovery:  given an observed trajectory, fit theta_SM, then
-#            invert the mapping to recover theta_ABM. Validated leave-one-out:
-#            hold out each run, recover its theta_ABM, compare to ground truth.
-#
-# The surrogate per cytokine is a saturating-growth (logistic-like) curve, which
-# matches the observed mean-concentration shapes (monotone rise to plateau). This
-# is intentionally cheap and fast, per the supervisor's "easy and fast model".
+# SMoRe ParS for the burn ABM (Jain et al. 2022, Bergman et al. 2024):
+#   stage A  logistic fit to each run's mean-concentration trajectory -> theta_SM
+#   stage B  GP mapping theta_ABM -> theta_SM across runs
+#   stage C  invert the mapping to recover theta_ABM (validated leave-one-out)
 
 import json
 import numpy as np
@@ -26,7 +14,7 @@ from sklearn.preprocessing import StandardScaler
 CYTOKINES = ["il8", "il1", "il6", "il10", "tnf", "tgf"]
 
 
-# ── STAGE A: phenomenological per-cytokine surrogate ────────────────────────
+# STAGE A: phenomenological per-cytokine surrogate
 def _saturating(t, A, k, t0):
     """Logistic saturating curve: A / (1 + exp(-k (t - t0)))."""
     return A / (1.0 + np.exp(-k * (t - t0)))
@@ -65,7 +53,7 @@ def fit_surrogates(Y, t_grid):
     return out, names
 
 
-# ── STAGE B: GP mapping theta_ABM -> theta_SM ───────────────────────────────
+# STAGE B: GP mapping theta_ABM -> theta_SM
 class ABMtoSMMapping:
     def __init__(self):
         self.x_scaler = None; self.y_scaler = None; self.gps = []
@@ -93,7 +81,7 @@ class ABMtoSMMapping:
         return self.y_scaler.inverse_transform(pred)
 
 
-# ── STAGE C: inversion (recover theta_ABM from a target theta_SM) ───────────
+# STAGE C: inversion (recover theta_ABM from a target theta_SM)
 def recover_theta_abm(mapping, theta_sm_target, bounds_lo, bounds_hi,
                       n_restarts=12, seed=0):
     """

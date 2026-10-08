@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
-train_deeponet_3d.py
-
 DeepONet surrogate for volumetric cytokine fields (thesis architecture).
-Trains on ONE run (chronological 70/10/19 split over its 99 time-windows).
+Trains on one run (chronological 70/10/19 split over its 99 time-windows).
 seed 42 tunes hyperparameters with Optuna; seeds 1 and 100 reuse the seed-42
 configuration to test stability.
 
@@ -384,7 +382,7 @@ def run_pipeline(grid, seed, cytokine, run_name,
     print(f"  Branch input: (N, 8) scalars  |  Trunk input: (N, {G3}, 25)")
     print(f"  Full grid per epoch: {G3} pts x {N} samples - no subsampling")
 
-    # 70/10/20
+    # 70/10/19
     Xbr_tr, Xtr_tr, Yf_tr = Xbranch[:70],   Xtrunk[:70],   Yf[:70]
     Xbr_vl, Xtr_vl, Yf_vl = Xbranch[70:80], Xtrunk[70:80], Yf[70:80]
 

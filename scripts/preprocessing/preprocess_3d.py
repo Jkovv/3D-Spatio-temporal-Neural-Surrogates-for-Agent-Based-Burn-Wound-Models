@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """
-preprocess_3d.py
-
 Converts raw CompuCell3D sweep output into the .npy tensors the surrogate
 training scripts consume.
 
@@ -18,21 +16,12 @@ Windowing: (t, t+1) -> t+2, look-back 2 frames, giving T-2 windows from T
 frames (101 frames -> 99 windows). Clip scale is kurtosis-adaptive and fitted
 on the training split only (first --train-n windows), matching the 2D protocol.
 
-Two scaling modes:
-  (default)      fit a fresh kurtosis-adaptive clip scale on the train split of
-                 the run(s) being processed. Use this for the benchmark run you
-                 will TRAIN on.
-  --scale-from   load cmax / cmax_raw / percentiles from an existing
-                 metadata.json (e.g. the benchmark run_0062) and REUSE them,
-                 fitting nothing. Use this to preprocess the other sweep runs
-                 for surrogate inference, so their inputs live in exactly the
-                 normalisation the trained surrogate expects. A frozen scale is
-                 the correct choice at inference time -- the same reason any ML
-                 pipeline fits the scaler on train and applies it unchanged to
-                 new data -- and this mode additionally reports, per run, the
-                 fraction of voxels that exceed the frozen cmax, i.e. how far
-                 each new run falls outside the range the surrogate was trained
-                 on.
+Scaling modes:
+  (default)      fit the clip scale on the train split of the run(s) processed
+                 (the benchmark run used for training).
+  --scale-from   reuse cmax / cmax_raw / percentiles from an existing
+                 metadata.json (e.g. run_0062) for the other sweep runs, and
+                 report per run the fraction of voxels above the frozen cmax.
 
 Usage (single benchmark run -- fits its own scale, then train the surrogate):
     python preprocess_3d.py --sim-root ../../sweep/outputs \\
@@ -97,12 +86,12 @@ def fit_cmax_per_cytokine(train_cyto: np.ndarray
                           ) -> Tuple[np.ndarray, np.ndarray, List[Optional[float]],
                                      np.ndarray]:
     """
-    Fit one clip value cmax per cytokine from TRAIN-SPLIT data only.
+    Fit one clip value cmax per cytokine from train-split data.
     Returns
         cmax     : (6,) per-cytokine clip value (percentile or true max)
         kappas   : (6,) per-cytokine excess kurtosis (post-floor)
         qs       : list of 6 percentiles (or None where no clipping)
-        cmax_raw : (6,) per-cytokine TRUE maxima (pre-floor; sets the floor)
+        cmax_raw : (6,) per-cytokine true maxima (pre-floor; sets the floor)
     """
     flat = train_cyto.reshape(-1, 6).astype(np.float64)
     cmax_raw = np.maximum(flat.max(axis=0), 1e-300)  # true per-cytokine maxima
@@ -112,20 +101,16 @@ def fit_cmax_per_cytokine(train_cyto: np.ndarray
     qs: List[Optional[float]] = []
     for c in range(6):
         col = floored[:, c]
-        # kurtosis and percentile on ACTIVE voxels only: the zeros are created
-        # by the noise floor, not by the field, and would otherwise push the
-        # percentile to zero for sparse 3D fields
+        # kurtosis and percentile on active voxels only
         col = col[col > 0] if np.any(col > 0) else col
-        # excess kurtosis (Fisher), unbiased - on the floored distribution
+        # excess kurtosis (Fisher), unbiased
         kappa = float(scipy_kurtosis(col, fisher=True, bias=False))
         q = clip_percentile_from_kurtosis(kappa)
         if q is None:
             cmax[c] = float(np.max(col))
         else:
             pv = float(np.percentile(col, q))
-            # Safeguard: if the chosen percentile still lands at/near zero
-            # (extremely sparse signal even after flooring), fall back to the
-            # true max so the signal is not collapsed to +1.
+            # percentile at the noise floor (very sparse field): use the max
             cmax[c] = pv if pv > NOISE_FLOOR_FRAC * cmax_raw[c] else float(np.max(col))
         kappas[c] = kappa
         qs.append(q)
@@ -137,8 +122,7 @@ def load_external_scale(scale_from: Path
                         ) -> Tuple[np.ndarray, np.ndarray, List[Optional[float]],
                                    np.ndarray]:
     """
-    Load a previously fitted scale from an existing metadata.json, so new runs
-    are normalised exactly as the training run was. Returns the same tuple as
+    Load a fitted scale from metadata.json. Returns the same tuple as
     fit_cmax_per_cytokine: (cmax, kappas, qs, cmax_raw).
     """
     if not scale_from.exists():
@@ -163,11 +147,8 @@ def load_external_scale(scale_from: Path
 def clipping_report(cyto: np.ndarray, cmax: np.ndarray,
                     cmax_raw: np.ndarray) -> dict:
     """
-    Per-cytokine fraction of ACTIVE voxels (above the noise floor) whose value
-    exceeds the frozen cmax and is therefore clipped. This quantifies how far a
-    run falls outside the training run's dynamic range: ~0 means the frozen
-    scale fits this run well; a large fraction means the surrogate is being
-    asked to predict a run whose signal it never saw at training scale.
+    Per-cytokine fraction of active voxels (above the noise floor) that
+    exceed the frozen cmax.
     """
     floored = floor_noise(cyto, cmax_raw).reshape(-1, 6)
     out = {}
@@ -210,7 +191,7 @@ def discover_runs(sim_root: Path, requested: Optional[List[str]]) -> List[Path]:
 
 
 def list_mcs_steps(run_dir: Path) -> List[int]:
-    """MCS values for which BOTH CytoStep and CellStep exist."""
+    """MCS values for which both CytoStep and CellStep exist."""
     lattice_dir = run_dir / "LatticeData"
     if not lattice_dir.exists():
         return []
@@ -301,7 +282,7 @@ def build_trunk_xyzt(G: int, t_norms: np.ndarray) -> np.ndarray:
     return Xt
 
 
-# process + write a single run (loads, scales, saves, frees) -------------
+# single run
 def process_one_run(run_dir, G, cmax, kappas, qs, cmax_raw, qs_json_src,
                     N_req, train_n, out_root, frozen, scale_from):
     """Load one run, window it, scale with the given (frozen or fitted) scale,
@@ -312,7 +293,7 @@ def process_one_run(run_dir, G, cmax, kappas, qs, cmax_raw, qs_json_src,
     Xb_raw, Y_raw, Ym, t_idx = build_windows(cyto_traj, mask_traj)
     t_norms = 2.0 * (t_idx - 2) / max(1, (T - 1 - 2)) - 1.0
     n_cell = int(mask_traj.sum())
-    del cyto_traj, mask_traj  # free the big trajectories immediately
+    del cyto_traj, mask_traj
 
     n_total = Xb_raw.shape[0]
     if n_total < N_req:
@@ -399,8 +380,7 @@ def assemble(args):
     print(f"[info] scaling = {'FROZEN from ' + str(args.scale_from) if frozen else 'fit on train split'}")
 
     if frozen:
-        # Frozen scale: stream run-by-run, never holding more than one run in
-        # RAM. This is what avoids the OOM kill on a 100-run sweep.
+        # frozen scale: process one run at a time to keep memory low
         cmax, kappas, qs, cmax_raw = load_external_scale(args.scale_from)
         print(f"\n[info] per-cytokine clip (frozen):")
         for name, v, k, q in zip(CYTOKINE_NAMES, cmax, kappas, qs):
@@ -420,8 +400,7 @@ def assemble(args):
         print(f"\n[done]  {done}/{len(runs)} run(s) written to {out_root}")
         return
 
-    # Non-frozen (fit-on-train): used for the single benchmark run only, so
-    # holding it in memory is fine. Load, fit scale, write.
+    # fit on train (single benchmark run): load, fit scale, write
     per_run = []
     for run_dir in runs:
         print(f"[load] {run_dir.name} ...", end=" ", flush=True)

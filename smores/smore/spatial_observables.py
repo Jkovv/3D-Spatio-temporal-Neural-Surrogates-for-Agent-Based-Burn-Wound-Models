@@ -1,54 +1,17 @@
 #!/usr/bin/env python3
-# combi3D/Simulation/smore/spatial_observables.py
-#
-# Spatially structured observables for SMoRe ParS.
-#
-# WHY THIS EXISTS
-# observables.py reduces each run to the volume-averaged concentration
-# trajectory il*_mean(t), then to four scalars per cytokine. That average
-# collapses 125,000 voxels into one number per frame and discards every bit of
-# spatial structure -- which is the one thing a 3D model provides over a 2D one.
-#
-# The measured consequence: with surrogate-derived observables, keil8 recovery
-# drops from R2 = 0.838 (ABM observables) to 0.191, with corr(recovered, true)
-# falling 0.915 -> 0.536 while variance and bias stay intact. Coarse-effect
-# parameters (init_ec, the number of constitutive sources) are over-weighted;
-# subtle-effect ones (keil8, a secretion rate) are lost. A plausible reading is
-# that keil8 shapes the *profile* of the diffusion front rather than its overall
-# level, so volume-averaging removes its signature before SMoRe ParS sees it.
-#
-# This module tests that reading. It computes observables that keep spatial
-# structure, and is otherwise a drop-in replacement: summarize_spatial(F) takes
+# Spatially structured observables for SMoRe ParS. summarize_spatial(F) takes
 # volumetric fields and returns a (n_runs, n_features) matrix in the same form
-# emulator_sobol() and fit_surrogates() already consume.
+# emulator_sobol() and fit_surrogates() consume, as an alternative to the
+# volume-averaged trajectories of observables.py.
 #
-# WHAT IT COMPUTES (per cytokine, per frame, then reduced over time)
-#   radial   : concentration in R shells about the wound centre -- captures how
-#              far and how steeply the field falls off, which a rate parameter
-#              should influence independently of the overall level
-#   layer    : mean per depth band along z -- physiologically the axis that
-#              defines burn severity, and the axis where the paper's mid-plane
-#              analysis already found anisotropy
-#   active   : fraction of voxels above a threshold -- how far the signal
-#              spreads, rather than how strong it is on average
-#   moments  : centroid distance from wound centre and spatial SD of the
-#              concentration distribution -- shape without a binning choice
-#   active-voxel quantiles and peak : median and 90th percentile computed over
-#              non-empty voxels only, plus the field maximum. Whole-field
-#              quantiles are useless on a sparse field -- if the signal occupies
-#              0.1% of voxels, even the 99th percentile sits in the background --
-#              so these condition on the active set instead. This is the regime
-#              IL-10 lives in, where the mean-based observable failed
-#              (gen R2 = -1124) because averaging over a ~99.99% empty field
-#              amplified background error to ~500x the signal. Whether they
-#              rescue IL-10 is an open question this experiment tests.
-#
-# HONEST NOTE ON INTERPRETATION
-# If recovery improves with these observables, the earlier limit was about
-# observable design, not surrogate fidelity, and the finding becomes a design
-# recommendation. If recovery does not improve, the fidelity claim is
-# strengthened, because the loss then survives observables that preserve the
-# spatial information. Both outcomes are informative; neither is assumed here.
+# Per cytokine, per frame, then reduced over time:
+#   radial   : mean concentration in R shells about the wound centre
+#   layer    : mean per depth band along z
+#   active   : fraction of voxels above a threshold
+#   moments  : centroid distance from the wound centre and spatial SD of the
+#              concentration distribution
+#   active-voxel quantiles and peak : median and 90th percentile over non-empty
+#              voxels only, plus the field maximum
 #
 # Usage as a library:
 #     from spatial_observables import summarize_spatial, spatial_feature_names
@@ -68,9 +31,7 @@ N_LAYER = 4       # depth bands along z
 ACTIVE_THRESH = 0.05   # fraction of that run's own field max
 
 
-# ----------------------------------------------------------------------------
 # geometry helpers
-# ----------------------------------------------------------------------------
 
 _GRID_CACHE = {}
 
@@ -88,14 +49,9 @@ def wound_centre(field_t0, mask=None, mode="geometric",
                  scaled=False, clip_max=None):
     """Reference point for the radial profiles.
 
-    mode='geometric' : centre of the lattice. Safe default, no assumptions.
+    mode='geometric' : centre of the lattice.
     mode='field'     : intensity-weighted centroid of the first frame.
     mode='mask'      : centroid of the supplied cell mask.
-
-    Which is right depends on how the wound is initialised in the 3D
-    configuration. If the injury is centred in the domain, 'geometric' and
-    'field' agree and the choice does not matter; if it is not, 'field' or
-    'mask' follows the wound. Report which was used.
     """
     G = field_t0.shape[0]
     if mode == "geometric":
@@ -129,9 +85,7 @@ def _radius_bins(G, centre, n_shells):
     return idx, r
 
 
-# ----------------------------------------------------------------------------
 # per-frame spatial descriptors
-# ----------------------------------------------------------------------------
 
 def frame_descriptors(F, centre, n_radial=N_RADIAL, n_layer=N_LAYER,
                       thresh_frac=ACTIVE_THRESH, scaled=False, clip_max=None):
@@ -140,11 +94,8 @@ def frame_descriptors(F, centre, n_radial=N_RADIAL, n_layer=N_LAYER,
     F : (T, G, G, G). Either physical units (non-negative) or the preprocessed
         [-1, 1] representation, in which case pass scaled=True and clip_max.
 
-    Denormalisation is not cosmetic here. In [-1, 1] the background sits at -1,
-    so the intensity-weighted moments sum signed weights, the total passes
-    through zero, and the centroid diverges. The quantiles break too, because
-    "active" cannot mean "> 0" when 0 is mid-range. Everything below therefore
-    assumes a non-negative field with background at 0.
+    Scaled fields are denormalised first: everything below assumes a
+    non-negative field with background at 0.
     """
     F = np.asarray(F, np.float64)
     if scaled:
@@ -188,10 +139,7 @@ def frame_descriptors(F, centre, n_radial=N_RADIAL, n_layer=N_LAYER,
         var = r2 - (mx[ok] ** 2 + my[ok] ** 2 + mz[ok] ** 2)
         spread[ok] = np.sqrt(np.maximum(var, 0.0))
 
-    # Quantiles over the WHOLE field are useless on a sparse one: if the signal
-    # occupies 0.1% of voxels, even the 99th percentile sits in the background.
-    # These are therefore computed over active voxels only (> 0), which is the
-    # regime IL-10 lives in. Frames with no active voxel yield 0.
+    # quantiles over active voxels (> 0) only; frames with no active voxel give 0
     q50a = np.zeros(T)
     q90a = np.zeros(T)
     peak = flat.max(axis=1)
@@ -206,13 +154,10 @@ def frame_descriptors(F, centre, n_radial=N_RADIAL, n_layer=N_LAYER,
             "q50a": q50a, "q90a": q90a, "peak": peak}
 
 
-# ----------------------------------------------------------------------------
 # reduction over time -> one feature vector per run
-# ----------------------------------------------------------------------------
 
 def _reduce_time(series):
-    """(T,) -> [final, mean, max, auc], matching observables.summarize_observable
-    so the two observable sets are compared on equal footing."""
+    """(T,) -> [final, mean, max, auc], as in observables.summarize_observable."""
     s = np.asarray(series, np.float64)
     T = len(s)
     _trap = getattr(np, "trapezoid", getattr(np, "trapz", None))
@@ -281,9 +226,7 @@ def n_features_per_cytokine(n_radial=N_RADIAL, n_layer=N_LAYER):
     return 4 * (n_radial + n_layer + 6)
 
 
-# ----------------------------------------------------------------------------
 # standalone check on a single run
-# ----------------------------------------------------------------------------
 
 def main():
     ap = argparse.ArgumentParser(

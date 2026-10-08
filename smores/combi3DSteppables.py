@@ -27,12 +27,8 @@ from numpy import *
 from builtins import range
 import os as _os_sweep
 
-# SWEEP MODE (env COMBI3D_SWEEP=1): headless HPC calibration runs.
-#   * skip PNG plot rendering + CC3D plot windows  (no GUI, faster)
-#   * skip per-cell per-MCS concentration CSV        (inode/time cost, unused)
-#   * write cytokine NPZ as float32                  (half the data volume)
-# STILL writes: CytoStep/CellStep NPZ (surrogate input) AND
-# mean_concentration.txt + cellcount.txt (SMoRe ParS scalar observables).
+# COMBI3D_SWEEP=1 (headless sweep runs): no plots, no per-cell CSV, float32 NPZ.
+# CytoStep/CellStep NPZ, mean_concentration.txt and cellcount.txt are still written.
 SWEEP_MODE = _os_sweep.environ.get("COMBI3D_SWEEP", "0") == "1"
 _NPZ_DTYPE = np.float32 if SWEEP_MODE else np.float64
 
@@ -167,15 +163,10 @@ class endothelialSteppable(SteppableBasePy):
             x, y, z = safe_randopos(self.cell_field, nx, ny, nz)
             self.cell_field[x:x + 1, y:y + 1, z:z + 1] = self.new_cell(self.MONOCYTE)
 
-        # Initialise per-cell attributes.
-        # born_mcs is set to a negative offset so cells start with a random
-        # pre-existing age (0 to span hours), making the population age-distributed
-        # from the first step.  Age in hours is always: (mcs - born_mcs) / relaxationmcs.
-        # targetVolume=3 / lambdaVolume=40 match the APRcombi3D 3D reference: with
-        # Temperature=100, a 1-voxel cell (targetVolume=1, lambdaVolume=10) has a 90%
-        # acceptance rate per CPM shrink attempt and disappears within a few MCS.
-        # targetVolume=3 requires three sequential shrinks (ΔE=40, 120, 200) making
-        # spontaneous CPM death negligible over 10,000-MCS relaxation intervals.
+        # Initialise per-cell attributes. Negative born_mcs gives a random starting
+        # age (0 to span hours); age in hours = (mcs - born_mcs) / relaxationmcs.
+        # targetVolume=3 / lambdaVolume=40 as in the APRcombi3D reference (1-voxel
+        # cells disappear within a few MCS at Temperature=100).
         for cell in self.cell_list:
             cell.targetVolume = 3
             cell.lambdaVolume = 40.0
@@ -193,8 +184,7 @@ class endothelialSteppable(SteppableBasePy):
                 cd.setSaturationCoef(setSaturationCoef)
                 cell.dict["span"] = lifespannr
                 cell.dict["dividepr"] = divprnr
-                # Pre-age by 0..(span-1) hours: prevents any cell dying at the
-                # first or second step() call (mcs=0 and mcs=relaxationmcs).
+                # pre-age by 0..(span-1) hours
                 cell.dict["born_mcs"] = -random.randint(0, lifespannr - 1) * relaxationmcs
 
             if cell.type == 3:  # MONOCYTE
@@ -222,7 +212,7 @@ class endothelialSteppable(SteppableBasePy):
                 cell.dict["dividepr"] = divprf
                 cell.dict["born_mcs"] = -random.randint(0, lifespanf - 1) * relaxationmcs
 
-        # ── PIFF dump: initial cell layout (MCS 0 only) ───────────────────────
+        # PIFF dump: initial cell layout (MCS 0 only)
         piff_path = os.path.join(
             os.path.dirname(os.path.dirname(fullFileName)), 'initial_cells.piff')
         with open(piff_path, 'w') as piff_f:
@@ -241,10 +231,7 @@ class endothelialSteppable(SteppableBasePy):
 
         ccount = np.zeros(total_celltypes + 1)
 
-        # Replenishment — every 10 biological hours (matches 2D reference interval).
-        # Re-initialises ALL existing cells as well as new arrivals, matching the
-        # 2D reference behaviour where the replenishment loop re-randomises every
-        # cell's age regardless of whether it is new or pre-existing.
+        # Replenishment every 10 biological hours, as in the 2D reference
         if mcs % (relaxationmcs * 10) == 0:
             for i in range(replen_n * 10):
                 x, y, z = safe_randopos(self.cell_field, nx, ny, nz)
@@ -262,8 +249,7 @@ class endothelialSteppable(SteppableBasePy):
                 x, y, z = safe_randopos(self.cell_field, nx, ny, nz)
                 self.cell_field[x:x + 1, y:y + 1, z:z + 1] = self.new_cell(self.MONOCYTE)
 
-            # Re-initialise ALL cells (new and existing) — matches 2D reference which
-            # re-randomises every cell's age in this block unconditionally.
+            # re-initialise all cells (new and existing), as in the 2D reference
             for cell in self.cell_list:
                 cell.targetVolume = 3
                 cell.lambdaVolume = 40.0
@@ -348,11 +334,8 @@ class endothelialSteppable(SteppableBasePy):
         self.scalarFieldtnf[:]  = np.reshape(cytokines[4], (nx, ny, nz), 'F')
         self.scalarFieldtgf[:]  = np.reshape(cytokines[5], (nx, ny, nz), 'F')
 
-        # Write cytokine concentrations directly to NPZ — bypasses the CC3D
-        # scalar-field sync bug where create_scalar_field_py writes are not
-        # reflected in the VTK output.  plot_cytokines.py reads these files.
-        # FiPy x-fastest flat order → reshape to (nz, ny, nx) in C order so
-        # arr[z, y, x] matches the VTK reader convention in plot_cytokines.py.
+        # Cytokine fields to NPZ (CC3D scalar-field writes do not reach the VTK
+        # output). FiPy x-fastest order -> (nz, ny, nx), i.e. arr[z, y, x].
         fileDir = os.path.dirname(os.path.abspath(fullFileName))
         _lattice_dir = os.path.join(os.path.dirname(fileDir), "LatticeData")
         os.makedirs(_lattice_dir, exist_ok=True)
@@ -415,9 +398,7 @@ class endothelialSteppable(SteppableBasePy):
             cctnf  = self.scalarFieldtnf[xCOM,  yCOM, zCOM]
             cctgf  = self.scalarFieldtgf[xCOM,  yCOM, zCOM]
 
-            # Per-MCS per-cell concentration file.
-            # Skipped in sweep mode (heavy inode/time cost, unused by SMoRe ParS,
-            # which reads the aggregate mean_concentration.txt instead).
+            # per-MCS per-cell concentration file (not in sweep mode)
             if not SWEEP_MODE:
                 fileDir = os.path.dirname(os.path.abspath(fullFileName))
                 cytoname = fileDir + "/datafiles" + str(mcs) + "concentration.txt"
@@ -439,7 +420,7 @@ class endothelialSteppable(SteppableBasePy):
             tnf_list.append(cctnf)
             tgf_list.append(cctgf)
 
-            # Age in biological hours — independent of step() call frequency
+            # age in biological hours
             cell_age = age_hours(mcs, cell)
 
             if cell_age > cell.dict["span"]:
@@ -494,7 +475,7 @@ class endothelialSteppable(SteppableBasePy):
 
                 ccount[cell.type] += 1
 
-        # Cell-count plot data + PNG — interactive mode only.
+        # cell-count plot data + PNG (interactive mode only)
         fileDir = os.path.dirname(os.path.abspath(fullFileName))
         if not SWEEP_MODE:
             labels = ['Endothelial', 'Neutrophils', 'Monocytes', 'Fibroblast',
@@ -507,7 +488,7 @@ class endothelialSteppable(SteppableBasePy):
                 os.makedirs(os.path.dirname(namer))
             self.plot_win.save_plot_as_png(namer, 1200, 1200)
 
-        # cellcount.txt is ALWAYS written (SMoRe ParS reads it as an observable).
+        # cellcount.txt (always written)
         countname = fileDir + "/cellcount.txt"
         if not os.path.exists(countname):
             with open(countname, 'w') as f:
@@ -548,8 +529,7 @@ class endothelialSteppable(SteppableBasePy):
                                  str(il8_std), str(il1_std), str(il6_std),
                                  str(il10_std), str(tnf_std), str(tgf_std)])
 
-        # Cytokine mean plot — interactive mode only.
-        # (mean_concentration.txt above is always written; SMoRe ParS reads it.)
+        # cytokine mean plot (interactive mode only)
         if not SWEEP_MODE:
             cyto_labels = ['IL-8', 'IL-1', 'IL-6', 'IL-10', 'TNF', 'TGF']
             cyto_means  = [il8_mean, il1_mean, il6_mean, il10_mean, tnf_mean, tgf_mean]

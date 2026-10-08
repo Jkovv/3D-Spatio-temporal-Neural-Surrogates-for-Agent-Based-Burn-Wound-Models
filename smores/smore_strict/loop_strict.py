@@ -1,39 +1,20 @@
 """Surrogate-in-the-loop with SMoRe ParS (IL-8).
 
-Question: can volume-averaged trajectories predicted by the neural surrogate stand
-in for ABM output as the data of the inference, once the surrogate's own error is
-accounted for?  The library of bound surfaces always comes from the ABM arm; only
-the held-out point's data box changes.  IL-8 is deterministic across realisations,
-so in every arm the SM uncertainty is the fit residual (sigma mode 'paper'), and a
-surrogate tolerance is added to it in quadrature, frame by frame.
+The bound-surface library always comes from the ABM; only the held-out point's data box changes.
+IL-8 is deterministic across realisations, so the SM uncertainty is the fit residual (sigma mode
+'paper'), with a surrogate tolerance added in quadrature per frame.
 
-Arms (all leave-one-out over the sweep points other than the surrogate's training run):
-  abm         ABM trajectory (reference)
-  sur         surrogate trajectory, no allowance for surrogate error (v1 experiment)
-  sur_val     surrogate trajectory, tolerance = the surrogate's relative RMS error of the
-              volume average on the validation frames of its own training run: what a
-              user knows before applying the surrogate elsewhere
-  sur_cv      surrogate trajectory, tolerance = per-frame relative RMS error of the
-              surrogate over all OTHER sweep points (the held-out point is never used):
-              an honest, out-of-distribution error model
-              NOTE: this treats the error as independent noise in every frame.  The
-              surrogate's error is correlated in time (a systematic offset of the whole
-              trajectory), which a fit over 99 frames averages away, so this tolerance
-              is too small by roughly sqrt(frames).  Kept to show exactly that.
-  sur_conf    surrogate trajectory, error propagated where the inference happens: on the
-              other sweep points the difference delta = phi(surrogate) - phi(ABM) between
-              the SM parameters fitted to the two trajectories is computed (transformed
-              scale), and the held-out data box is shifted and widened by its empirical
-              quantiles (two-sided, Bonferroni over the SM parameters, split-conformal
-              style).  Accounts for bias and temporal correlation; the held-out point's own
-              ABM output is never used.  This is the main surrogate arm.
-  abm_err_conf  control: ABM trajectory of the held-out point plus the surrogate's error
-              trajectory from a different, randomly chosen sweep point, with the same
-              conformal widening as sur_conf.  Same error size and temporal structure as
-              the surrogate's, but unrelated to the held-out parameters.  If sur_conf
-              recovers worse than abm_err_conf, the surrogate's errors are
-              parameter-dependent: they distort the information the inference needs.
-  abm_err_cv  the same control with the per-frame tolerance of sur_cv (optional arm).
+Arms (leave-one-out over the sweep points except the surrogate's training run):
+  abm           ABM trajectory (reference)
+  sur           surrogate trajectory, no surrogate-error allowance
+  sur_val       tolerance = surrogate's relative RMS error on its own validation frames
+  sur_cv        tolerance = per-frame relative RMS error over all other sweep points
+                (treats the error as independent per frame)
+  sur_conf      data box shifted and widened by the quantiles of phi(surrogate) - phi(ABM) over
+                the other sweep points (split-conformal, Bonferroni over SM parameters)
+  abm_err_conf  control: held-out ABM trajectory plus the surrogate error of another, random
+                sweep point, with the same widening as sur_conf
+  abm_err_cv    the same control with the sur_cv tolerance (optional)
 """
 import copy
 import sys, os, json, argparse, numpy as np
@@ -110,7 +91,7 @@ def tf_pair(x, y, lb):                                # one transform (and floor
     return np.log(np.maximum(x, fl)), np.log(np.maximum(y, fl))
 def conformal(fits_data):
     """Shift and widen every held-out data box by the quantiles of delta = phi(sur) - phi(ABM) over the
-    OTHER sweep points.  Box for phi(ABM): [lo - q_hi(delta), hi - q_lo(delta)] on the transformed scale."""
+    other sweep points.  Box for phi(ABM): [lo - q_hi(delta), hi - q_lo(delta)] on the transformed scale."""
     Bs, Ba = best(plain_fits("sur", Ys)), best(fits_abm)
     delta = np.column_stack([np.subtract(*tf_pair(Bs[:, q], Ba[:, q], lob_sm[q])) for q in range(len(keys_sm))])
     a_q = a.conf_alpha/len(keys_sm); out = []; adj = []

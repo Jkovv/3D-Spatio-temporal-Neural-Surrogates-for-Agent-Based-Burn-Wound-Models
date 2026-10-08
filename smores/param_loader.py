@@ -1,35 +1,18 @@
-# combi3D/Simulation/param_loader.py
+# Central loader for per-run SMoRe ParS / sweep parameters. Each ABM trajectory
+# is paired with its sampled theta_ABM vector (Jain et al. 2022): the sweep
+# driver writes one JSON per run (a single "runs[i].params" dict from the
+# manifest), found via $SMORE_PARAMS or as params.json next to this module;
+# params_biology.py and params_transitions.py both call get_overrides(), which
+# reads that JSON once (cached).
 #
-# Central loader for per-run SMoRe ParS / sweep parameters.
-#
-# Mechanism (decided to match Jain et al. 2022 SMoRe ParS workflow, where each
-# ABM trajectory must be uniquely paired with its sampled theta_ABM vector):
-#
-#   1. The sweep driver writes ONE JSON file per run containing that run's
-#      parameter vector (a single "runs[i].params" dict from the manifest).
-#   2. Before launching CompuCell3D, the driver sets the environment variable
-#         SMORE_PARAMS=/abs/path/to/run_XXXX_params.json
-#   3. params_biology.py and params_transitions.py both call get_overrides(),
-#      which reads that JSON exactly once (cached) and returns the vector.
-#   4. The same JSON is copied next to the run's LatticeData/ output so that
-#      preprocessing and SMoRe ParS can recover theta_ABM directly from disk.
-#
-# Design guarantees (these are the things the old single-file star-import
-# mechanism did NOT give, and which caused runs to silently fall back to
-# baseline):
-#   - FAIL LOUD on unknown parameter names (typo / manifest mismatch -> crash,
-#     never a silent no-op).
-#   - FAIL LOUD on non-finite / out-of-type values.
-#   - LOG CLEARLY when no SMORE_PARAMS is set (baseline run) so an unintended
-#     baseline cannot masquerade as a sampled run.
-#   - Read the JSON ONCE; both override modules see an identical vector.
+# Unknown parameter names and non-finite / mistyped values raise; a run with
+# no parameter file is logged as a baseline run.
 
 import json
 import os
 import sys
 
-# ── Whitelist of parameters that are allowed to be overridden. ───────────────
-# A name not in this set is rejected (catches manifest/code drift early).
+# Parameters that may be overridden; any other name is rejected.
 # "kind" controls post-processing:
 #     "int_count" -> rounded and cast to int (cell counts feed range()).
 #     "float"     -> used as-is.
@@ -58,7 +41,7 @@ _ALLOWED = {
     "tranril6": "float",
     "sigmoida": "float",
     "sigmoidb": "float",
-    # initial cell counts (params_biology) -- MUST be int, they feed range()
+    # initial cell counts (params_biology), int: they feed range()
     "init_ec": "int_count",
     "init_n":  "int_count",
     "init_m":  "int_count",
@@ -128,7 +111,6 @@ def _load():
         return _cache
 
     if not os.path.isfile(path):
-        # Hard error: an intended sweep run must never silently fall back.
         raise FileNotFoundError(
             f"[param_loader] parameter file {path!r} (from {source}) does not "
             f"exist. Refusing to run on baseline for what was meant to be a "
@@ -171,10 +153,8 @@ def apply_to(namespace, allowed_subset):
     """
     Inject overrides into a module namespace (the dict returned by globals()).
 
-    allowed_subset: iterable of names this particular module is responsible
-    for. Only those keys are written, so params_biology won't clobber a
-    transitions-only name and vice versa, and a mis-scoped override surfaces
-    as an unused-key warning rather than a silent wrong write.
+    allowed_subset: names this module is responsible for; only those keys
+    are written.
     """
     ov = get_overrides()
     subset = set(allowed_subset)

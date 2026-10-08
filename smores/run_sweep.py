@@ -1,24 +1,17 @@
 #!/usr/bin/env python3
-# combi3D/Simulation/run_sweep.py
+# Runs the ABM sweep from manifest.json, one directory per run:
 #
-# Drives a SMoRe ParS / sweep over the ABM from a manifest.json, using the
-# per-run-directory layout (matching the original sweep, but with a validated
-# JSON parameter file instead of a generated .py override):
+#   sweep/runs/<run_id>/Simulation/   <- copy of the Simulation code
+#       + params.json                 <- this run's theta vector
+#   sweep/outputs/<run_id>/           <- CC3D output (CC3D rejects output
+#                                        under the .cc3d parent directory)
 #
-#   sweep/runs/<run_id>/Simulation/   <- full copy of the Simulation code
-#       + params.json                 <- THIS run's theta vector (validated)
-#   sweep/outputs/<run_id>/           <- CC3D output (OUTSIDE the run dir;
-#                                        CC3D rejects output under the .cc3d
-#                                        parent directory)
-#
-# Each run reads its own params.json via param_loader (no reliance on the
-# environment being passed through CC3D's launcher). The CC3D launch uses the
-# real command:
+# Each run reads its own params.json via param_loader. Launch command:
 #     <cc3d_python> -m cc3d.run_script --input=<run>/combi3D.cc3d \
 #                   --output-dir=<out>
 #
 # Two modes:
-#   --mode local : run sequentially in this process (PoC).
+#   --mode local : run sequentially in this process.
 #   --mode slurm : emit a SLURM array script; submit by hand.
 
 import argparse
@@ -116,9 +109,7 @@ def emit_slurm(staged, out_root, cc3d_python, account, work, cpus, hours):
 
 set -euo pipefail
 
-# Sweep mode: float32 output + no PNG/plots (headless HPC). Set here so it
-# always applies inside the job, regardless of the submitting shell's env.
-# Override with --export on sbatch if you ever want the interactive behaviour.
+# sweep mode: float32 output, no plots
 export COMBI3D_SWEEP=1
 
 LINE=$(sed -n "${{SLURM_ARRAY_TASK_ID}}p" "{idx_file}")

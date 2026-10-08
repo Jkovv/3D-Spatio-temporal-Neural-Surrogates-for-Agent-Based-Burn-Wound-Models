@@ -1,48 +1,25 @@
 """
 SMoRe ParS following Jain et al. (2022) and Bergman et al. (2024).
 
-Stage 1  explicit surrogate model (SM) per cytokine, chosen by AIC on the
-         volume-averaged ABM trajectories (sm_selection.py):
+Stage 1  surrogate model (SM) per cytokine, chosen by AIC (sm_selection.py):
            IL-8                : M3  c0 e^{-kt} + p/(k-lam) (e^{-lam t} - e^{-kt})
            IL-6, IL-10, TNF-a  : M1  c0 e^{-kt} + p/k (1 - e^{-kt})
            TGF-b               : M2  A / (1 + e^{-r (t - t0)})
            IL-1b excluded (no candidate reaches R2 > 0.9 on most runs).
-Stage 2  at every sweep point: SM fitted to the replicate-mean trajectory by
-         weighted least squares (weights = standard error across replicates,
-         Jain eq. 2); 95% bounds on every SM parameter by profile likelihood
-         (Delta chi2 = 3.84).  Each sweep point thus gives a box in SM space.
-         --sigma-mode controls what happens when the replicate standard error
-         is far below the SM approximation error (volume-averaged IL-8 is
-         deterministic to ~1e-5 relative):
-           paper       replicate SE, except that a cytokine whose median SE is
-                       below DET_TOL of the trajectory maximum uses the RMS
-                       residual of an unweighted fit instead (the choice stated
-                       in the manuscript; the v1 code tested SE <= 1e-12 and
-                       therefore never took this branch)
-           quadrature  sqrt(SE^2 + RMS_fit^2) for every cytokine: replicate
-                       noise and SM approximation error added in quadrature
-           se          replicate SE only (v1 behaviour, Jain eq. 2 literally)
-Stage 3  leave-one-out: the held-out point's own SM bounds play the role of
-         the data-derived set Phi (Bergman 2024).  Jain step 4/6: the lower and
-         upper bound of every SM parameter is interpolated over ABM parameter
-         space with a Gaussian process, and the admissible region is the set of
-         ABM parameter vectors whose predicted (GP-widened) box intersects the
-         data box in every SM parameter.
-         --sampler controls how that region is sampled:
-           qmc         (default) evaluate the overlap condition on a scrambled
-                       Sobol sequence, drawn in batches until at least --n-min
-                       points are accepted or --n-cand-max points have been
-                       screened.  Accepted points are a uniform (quasi-random)
-                       sample of the region by construction, so widths and
-                       coverage are unbiased; the acceptance fraction is the
-                       region's volume fraction of the sweep box.  If fewer
-                       than --n-min points are found, an exact hit-and-run
-                       Markov chain (uniform target, no clipping) continues
-                       from them.
-           walk        v1 procedure (simulated annealing + random walk with
-                       proposals clipped to the box).  Kept for comparison
-                       only: clipping puts point mass on the box boundary and
-                       biases the width estimate upwards.
+Stage 2  per sweep point: weighted LS fit to the replicate-mean trajectory and 95%
+         profile-likelihood bounds (Delta chi2 = 3.84) on every SM parameter.
+         --sigma-mode:
+           paper       replicate SE; RMS residual of an unweighted fit for cytokines
+                       whose median SE is below DET_TOL of the trajectory maximum
+           quadrature  sqrt(SE^2 + RMS_fit^2)
+           se          replicate SE only (Jain eq. 2)
+Stage 3  leave-one-out: GP-interpolated lower/upper bound surfaces of every SM
+         parameter (Jain step 4/6); the admissible region is the set of ABM
+         parameter vectors whose predicted box intersects the held-out data box.
+         --sampler:
+           qmc         (default) scrambled Sobol screen in batches, continued by
+                       hit-and-run if fewer than --n-min points are accepted
+           walk        v1 annealing + clipped random walk, for comparison
 """
 import numpy as np, json, sys, argparse, os, time
 from scipy.optimize import curve_fit
@@ -163,9 +140,7 @@ def fit_point(args):
         if pb is None:
             out[name] = None; continue
         rng = [profile_bounds(f, t, z, sig, pb, chi2, j, lo, hi, p0s) for j in range(len(pn))]
-        # identifiability of the SM fit itself: a best-fit value at an upper limit of the allowed range, or at a
-        # lower limit that is not a natural boundary (zero), or a profile interval that spans the whole allowed
-        # range, means the trajectory does not determine that SM parameter (e.g. a plateau that is never reached)
+        # SM parameter not identified: best fit at a (non-zero) limit, or profile interval spanning the range
         tol = lambda lim: 1e-6*max(1.0, abs(lim))
         unid = [bool(pb[j] >= hi[j] - tol(hi[j]) or (lo[j] != 0 and pb[j] <= lo[j] + tol(lo[j]))
                      or (rng[j][0] <= lo[j] + tol(lo[j]) and rng[j][1] >= hi[j] - tol(hi[j]))) for j in range(len(pn))]
@@ -222,14 +197,7 @@ def evaluate(theta, fits, mu, se, cyts, names, bounds):
            "accepted_sets": acc}
     return out
 
-# ---------------------------------------------------------------------------
-# Jain et al. (2022), step 4 and 6: reconstruct the upper and lower 95% bound
-# hypersurfaces of every SM parameter as functions of the ABM parameters, then
-# infer the region of ABM parameter space whose predicted SM boxes intersect
-# the data box.  In 10 dimensions with 100 sweep points the hypersurfaces are
-# interpolated with Gaussian processes (Jain et al. use bilinear interpolation
-# in 2D); the region is sampled by rejection on a quasi-random sequence.
-# ---------------------------------------------------------------------------
+# Jain et al. (2022), steps 4 and 6: GP bound surfaces and admissible regions
 def _sm_bound_matrix(fits, runs):
     keys = []
     for name in CYT_SM:
@@ -268,8 +236,7 @@ def _fit_bound_surfaces(X, Lt, Ut, tr, unid=None):
     from sklearn.gaussian_process.kernels import Matern, ConstantKernel, WhiteKernel
     models = []
     for q in range(Lt.shape[1]):
-        # library points at which this SM parameter is not identified (see fit_point) carry no information
-        # about its bound surfaces and would enter the GP as outliers; they are left out of this surface only
+        # leave out library points where this SM parameter is not identified
         rows = tr & np.isfinite(Lt[:, q]) & np.isfinite(Ut[:, q])
         if unid is not None: rows &= ~unid[:, q]
         if rows.sum() < MIN_LIBRARY:
@@ -301,21 +268,10 @@ def _make_violation(models, dl, du, n_sd):
     return violation
 
 def _hit_and_run(W, violation, n_steps, rng, n_grid=48, n_bisect=5, cov=None):
-    """Hit-and-run sampler for the uniform distribution on the region {violation == 0}
-    inside the unit box, with a 'slice' step.  For every walker: draw a random direction,
-    take the chord of the box along it, locate the feasible part of the chord on a grid of
-    n_grid points (jittered, including both chord ends and the current point) refined by
-    n_bisect bisections at the ends of every feasible run, and draw the next point
-    uniformly on that feasible set.  The feasible set of a line is the same from every
-    point on the line, so the kernel is symmetric and the uniform distribution on the
-    region is invariant; nothing is clipped and no proposal leaves the box.  A final
-    membership check rejects the rare draw outside the region.
-    Directions: if `cov` is given, half of the walkers per step draw their direction from
-    N(0, cov) (the shape of the region estimated from the starting points) and half
-    isotropically.  The direction distribution is fixed and symmetric (u and -u equally
-    likely), so the uniform distribution stays invariant; aligned directions only make
-    the chain mix faster in thin, oblique regions.
-    Returns samples of shape (n_steps, walkers, d) and the move rate."""
+    """Hit-and-run sampler for the uniform distribution on {violation == 0} in the unit box.
+    Each step: random direction (half of the walkers from N(0, cov) if `cov` is given),
+    feasible part of the chord on n_grid points refined by n_bisect bisections, next point
+    uniform on it. Returns samples of shape (n_steps, walkers, d) and the move rate."""
     W = W.copy(); m, d = W.shape; samples = []; n_acc = 0
     for _ in range(n_steps):
         u = rng.standard_normal((m, d))
@@ -528,9 +484,7 @@ def _run_fold(arg):
                  seeds[rng.choice(len(seeds), min(len(seeds), 10*nw), replace=False)]
             n_steps = int(min(_G["mcmc_max_steps"], max(50, np.ceil(_G["mcmc_total"]/len(W0)))))
             cov = np.cov(seeds.T) + 1e-6*np.eye(d) if len(seeds) > d else None
-            # Run the chains in rounds and extend them until the split R-hat of the second half of the chain is
-            # at or below the target, or the step cap is reached.  The sample is always the second half of the
-            # whole chain, so the starting points (annealed or not) never enter it.
+            # extend the chains until split R-hat <= target or the step cap; sample = second half of the chain
             chunks, rates, W, steps, target = [], [], W0, 0, _G["rhat_target"]
             while True:
                 Sx, rate = _hit_and_run(W, violation, n_steps, rng, cov=cov)
@@ -635,9 +589,7 @@ def summarise_region(X, accepted, names, info=None, n_sd=2.0, ref_sd=None, rhat_
     which the true vector itself is admissible.  Surfaces: leave-one-out R2 of every
     interpolated bound and the share of held-out bounds within n_sd predictive SDs."""
     n = len(accepted); res = {}
-    # Sample-dependent statistics (region median, marginal containment, width, ridge) use only the folds whose
-    # sample is a uniform draw (quasi-random screen or a chain with split R-hat <= rhat_target).  Folds whose chain
-    # did not converge keep their sample-independent results (admissibility of the true vector, non-emptiness).
+    # sample-dependent statistics only use folds with a uniform sample (qmc screen or converged chain)
     def _ok(k):
         if info is None: return True
         inf = info[k]; rh = inf.get("rhat_max", float("nan"))
@@ -650,8 +602,7 @@ def summarise_region(X, accepted, names, info=None, n_sd=2.0, ref_sd=None, rhat_
         q = {}
         if ne:
             est = np.array([np.median(accepted[k][:, i]) for k in ne])
-            # quantiles taken from values present in the sample (inverted CDF), so that a small discrete region
-            # (finite design) is handled correctly; for large continuous samples this is the usual central 95%
+            # inverted-CDF quantiles, so small discrete regions work too
             hit = [np.quantile(accepted[k][:, i], .025, method="inverted_cdf") - 1e-7 <= X[k, i] <=
                    np.quantile(accepted[k][:, i], .975, method="inverted_cdf") + 1e-7 for k in ne]
             q.update(r2_median_accepted=_r2(X[ne, i], est), coverage95=float(np.mean(hit)), coverage95_all_folds=float(np.sum(hit)/len(ok)),

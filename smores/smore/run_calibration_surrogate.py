@@ -1,37 +1,19 @@
 #!/usr/bin/env python3
-# combi3D/Simulation/smore/run_calibration_surrogate.py
+# SMoRe ParS calibration with the surrogate in the loop: the scalar observables
+# fed to Sobol and SMoRe ParS are computed from the neural surrogate's predicted
+# cytokine fields instead of the raw ABM output. Each predicted frame is
+# spatially averaged to give il*_mean(t), the same quantity observables.py reads
+# from mean_concentration.txt.
 #
-# SMoRe ParS calibration with the SURROGATE IN THE LOOP.
+# The surrogate's normalisation is frozen at run_0062. Across the sweep that
+# scale clips ~1.6% of active voxels for IL-8 and ~0.4% for IL-10, but ~64% for
+# IL-1beta and ~87% for IL-6, so only il8 and il10 are used by default. Each
+# model predicts one cytokine; its input still carries the ABM's other channels
+# and cell masks for the run being predicted.
 #
-# Difference from run_calibration.py: the scalar observables fed to the Sobol
-# analysis and to SMoRe ParS are computed from the trained neural surrogate's
-# predicted cytokine fields, not read from the raw ABM output. For each sweep
-# run the surrogate predicts the volumetric field at every timestep, each frame
-# is spatially averaged to give the mean-concentration trajectory il*_mean(t),
-# and those trajectories are the observable input -- exactly the quantity
-# observables.py otherwise reads from mean_concentration.txt.
-#
-# CYTOKINE SCOPE (report this in the paper):
-# The surrogate is trained at one sweep point (run_0062) and its normalisation
-# is frozen at that point's statistics. Measured across the sweep, that frozen
-# scale transfers cleanly for IL-8 (~1.6% of active voxels clipped) and IL-10
-# (~0.4%), but not for IL-1beta (~64%) or IL-6 (~87%), which are near-absent at
-# run_0062 and therefore set a clip threshold far below the sweep-wide range.
-# Predictions for those cytokines would be made from systematically flattened
-# inputs, so they are excluded by default. The default --cytokines il8 il10 is
-# the pair the surrogate benchmark itself is built on (the dense and sparse
-# endpoints), keeping the forward model and the calibration on the same fields.
-#
-# HONEST SCOPE: the surrogate predicts one cytokine per trained model, and its
-# trunk input still carries the ABM's other channels and cell masks for the run
-# being predicted. This is a surrogate-in-the-loop with ABM-supplied context,
-# not a standalone replacement for the simulator.
-#
-# The script reports, per cytokine and per run, how well the surrogate
-# reproduces that run's true mean-concentration trajectory (generalisation R2),
-# and re-runs the same Sobol + recovery pipeline on the ABM observables so the
-# two can be compared directly. Matching ranking and recovery is evidence the
-# surrogate can stand in for the ABM; divergence is a measured limit.
+# Reports the per-run generalisation R2 of the mean-concentration trajectory and
+# re-runs the same Sobol + recovery pipeline on the ABM observables for
+# comparison.
 #
 # Usage:
 #   python run_calibration_surrogate.py \
@@ -51,9 +33,7 @@ from pathlib import Path
 
 import numpy as np
 
-# --- make the training modules importable regardless of working directory ----
-# train_deeponet_3d.py lives in scripts/deeponet/, train_unet_3d.py in
-# scripts/unet/. This file sits in smores/smore/, so walk up to the burns root.
+# make the training modules in scripts/deeponet/ and scripts/unet/ importable
 _HERE = Path(__file__).resolve()
 _BURNS_ROOT = _HERE.parents[2]                 # smores/smore/ -> smores/ -> burns/
 for _sub in ("scripts/deeponet", "scripts/unet"):
@@ -62,7 +42,6 @@ for _sub in ("scripts/deeponet", "scripts/unet"):
         sys.path.insert(0, str(_p))
 sys.path.insert(0, str(_HERE.parent))
 
-# Existing SMoRe ParS pipeline -- reused UNCHANGED.
 from observables import load_sweep, summarize_observable, CYTOKINES
 from sensitivity import emulator_sobol, select_top_k
 from smore_pars import fit_surrogates, leave_one_out_recovery
@@ -75,8 +54,7 @@ def feature_names_for(cyts):
 
 
 def load_surrogate(model_name, weights_path, grid, best_params):
-    """Rebuild the trained network and load its weights. The architecture is
-    imported from the training module, so it cannot drift from the weights."""
+    """Rebuild the trained network (from the training module) and load its weights."""
     import importlib
     if model_name == "deeponet":
         mod = importlib.import_module("train_deeponet_3d")
@@ -102,13 +80,8 @@ def _denorm(x_scaled, clip_max):
 
 
 def predict_meanconc(mod, model, model_name, run_dir, cyt_idx, clip_max):
-    """Predict this run's fields and spatially average each frame, giving the
-    mean-concentration trajectory in physical units. Inputs are the run's own
-    preprocessed frames, so this measures single-step generalisation to an
-    unseen parameter point without autoregressive drift.
-
-    The branch/trunk inputs are built by the training module's own functions, so
-    the encoding cannot drift from what the loaded weights were trained on."""
+    """Predict this run's fields (one step ahead from its own preprocessed frames)
+    and spatially average each frame: mean-concentration trajectory in physical units."""
     if model_name == "deeponet":
         Xb = np.load(run_dir / "X_branch.npy").astype(np.float32)
         Xt = np.load(run_dir / "X_trunk.npy").astype(np.float32)
@@ -128,8 +101,7 @@ def predict_meanconc(mod, model, model_name, run_dir, cyt_idx, clip_max):
 
 
 def true_meanconc(run_dir, cyt_idx, clip_max):
-    """Same quantity from the run's own ABM target field: the reference the
-    surrogate is scored against."""
+    """Same quantity from the run's ABM target field."""
     Y = np.load(run_dir / "Y_target.npy").astype(np.float32)[..., cyt_idx]
     Y_phys = _denorm(Y, clip_max)
     return Y_phys.reshape(Y_phys.shape[0], -1).mean(axis=1)
@@ -143,21 +115,18 @@ def r2(truth, pred):
 
 
 def build_surrogate_Y(args, names, cyts):
-    """Return (theta, Y_sur, Y_abm, run_ids, t_grid, diagnostics). Y_sur holds
-    surrogate-derived mean-concentration trajectories, Y_abm the ABM ones, both
-    restricted to `cyts` and on the same time grid, so the two pipelines run on
-    identical footing."""
+    """Return (theta, Y_sur, Y_abm, run_ids, t_grid, diagnostics): surrogate and ABM
+    mean-concentration trajectories for `cyts` on the same time grid."""
     infer_root = Path(args.infer_root)
     weights_dir = Path(args.weights_dir)
     gtag = f"{args.grid}x{args.grid}x{args.grid}"
 
-    # theta and run ordering come from the existing ABM loader (params.json), so
-    # the theta<->observable pairing matches the ABM-based pipeline exactly.
+    # theta and run ordering from the ABM loader (params.json)
     theta, Y_abm_full, run_ids, t_grid = load_sweep(args.sim_root, names)
     T = Y_abm_full.shape[1]
 
     cyt_idx = [CYTOKINES.index(c) for c in cyts]
-    # ABM arm: the same volume-averaged quantity as the surrogate arm (true_meanconc)
+    # ABM arm: same volume-averaged quantity (true_meanconc)
     Y_abm = np.zeros((len(run_ids), T, len(cyt_idx)))
     Y_sur = np.zeros_like(Y_abm)
     Tmin = T
@@ -210,7 +179,7 @@ def build_surrogate_Y(args, names, cyts):
 
 
 def run_pipeline(theta, Y, t_grid, names, bounds, cyts, args, label):
-    """Run the unchanged Sobol + SMoRe ParS pipeline on one observable tensor."""
+    """Sobol + SMoRe ParS on one observable tensor."""
     feats = summarize_observable(Y)
     fnames = feature_names_for(cyts)
     print(f"  [{label}] observable matrix {feats.shape}")
@@ -274,8 +243,7 @@ def main():
           f"cytokines {args.cytokines}) ...")
     theta, Y_sur, Y_abm, run_ids, t_grid, diag = build_surrogate_Y(
         args, names, args.cytokines)
-    # save both arms' trajectories so that any later analysis (e.g. SMoRe ParS on
-    # surrogate-predicted trajectories) can run on CPU without re-running the network
+    # save both arms' trajectories for later CPU-only analysis
     np.savez(args.out.replace(".json", "") + "_trajectories.npz",
              theta=theta, Y_sur=Y_sur, Y_abm=Y_abm, run_ids=np.array(run_ids),
              t_grid=np.asarray(t_grid), cytokines=np.array(args.cytokines))

@@ -1,31 +1,14 @@
-"""SMoRe ParS (Jain 2022 / Bergman 2024) on the external E. coli growth-curve sweep of
-Gong & Ying (Sci Rep 2025): 5 genomes x 29 media = 145 conditions, 6 replicate curves
-each.  Exactly the pipeline used on the ABM (smore_pars_strict.py): replicate mean and
-standard error, logistic SM (M2) with profile-likelihood bounds, Gaussian-process bound
-surfaces, leave-one-out admissible regions in the 9-dimensional input space, the same
-sigma mode, widening and region sampler.
+"""SMoRe ParS on the E. coli growth-curve sweep of Gong & Ying (Sci Rep 2025): 5 genomes x 29 media
+= 145 conditions, 6 replicate curves each, with the pipeline of smore_pars_strict.py (logistic SM (M2),
+profile-likelihood bounds, GP bound surfaces, leave-one-out admissible regions).
 
-Support of the inputs: by default the region is evaluated on the experiment's own design
-(every genome x medium, 145 conditions); --support grid / continuous give the product grid
-of levels and the continuous box (v1) for comparison.
+--support design (default) evaluates the region on the 145 conditions of the experiment; grid and
+continuous use the product grid of levels or the continuous box (v1).
+--mode synthetic is the positive control: real design, replicate noise and missing values, with curves
+generated from a known dependence of plateau, rate and midpoint on the three --active inputs.
 
-Purpose: show that the behaviour of the method is not a product of features of the ABM
-data (near-deterministic IL-8, simulator smoothness, Latin-hypercube design).  Three
-checks, each reported for the real curves and for a positive control:
-  1. calibration: share of conditions whose true input vector is itself admissible,
-     and leave-one-out accuracy/calibration of the interpolated bound surfaces;
-  2. information: per input, the R2 of the region median against a model-free
-     reference, a GP regression from the fitted SM parameters straight to the input
-     (leave-one-out).  If SMoRe ParS recovers about as much as the data carry, the two
-     agree; if it recovers much less, the method loses information;
-  3. --mode synthetic (positive control): the real design, the real replicate noise and
-     missing-value pattern, but curves generated from a KNOWN dependence of the logistic
-     parameters on three inputs (--active: plateau, rate, midpoint; one input each), each
-     spanning the 5-95% range of that parameter in the real curves.  The method
-     should constrain those three (and inputs that the design ties to them) and no others.
-
-Input either the three source spreadsheets (--curves --design --media; --save-npz caches
-them as arrays) or such a cache (--from-npz).
+Input: the three source spreadsheets (--curves --design --media; --save-npz caches them) or such a
+cache (--from-npz).
 """
 import sys, os, json, argparse, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -111,13 +94,8 @@ if a.mode == "synthetic":
     logA, logr, t0 = np.log(B[:, 0]), np.log(np.maximum(B[:, 1], 1e-6)), B[:, 2]
     Xn = (th - th.min(0))/np.maximum(th.max(0) - th.min(0), 1e-300)
     U = (Xn - Xn.mean(0))/np.maximum(Xn.std(0), 1e-12)
-    # one active input per SM parameter, so that the control contains no built-in ridge (two inputs acting on
-    # the same SM parameter could only be recovered through their combination, as init_ec and keil8 in the ABM)
-    # Each SM parameter is a linear function of its input on the normalised design scale, spanning the 5-95%
-    # range of that parameter in the real curves (log scale for plateau and rate).  Using the real range rather
-    # than a multiple of the SD keeps every synthetic curve inside the observed window: in this one-factor-at-a-
-    # time design the rare levels lie far from the mean, and an SD-based scaling would push the midpoint outside
-    # the measurement period and the plateau above the parameter limits.
+    # one active input per SM parameter, linear on the normalised design scale over the 5-95% range of the
+    # real values (log scale for plateau and rate)
     ix = {p: names.index(p) for p in a.active}
     pA, pr, pt = a.active
     def span(v, x):
@@ -132,8 +110,7 @@ if a.mode == "synthetic":
                         "inactive": [p for p in names if p not in a.active]}
     say(f"positive control: plateau <- {pA}; rate <- {pr}; midpoint <- {pt}; each spanning {a.effect} x the "
         f"{100*a.synth_q[0]:.0f}-{100*a.synth_q[1]:.0f}% range of the real values")
-    # diagnostic: an SM parameter that the window does not determine (best fit at a limit, or profile interval
-    # spanning the range) is flagged unidentified and leaves the bound surfaces; count the flags per genome
+    # unidentified SM parameters per genome
     gcol = names.index("genome_Mb"); unid = {}
     for g in np.unique(np.round(th[:, gcol], 6)):
         sel = [f for f, gg in zip(fits, th[:, gcol]) if abs(gg - g) < 1e-6]
@@ -155,15 +132,7 @@ say(f"design: levels per input {lv}; input pairs with |correlation| > 0.5 over t
 res["design"] = {"levels": lv, "correlated_pairs": pairs, "n_media": int(len(np.unique(np.round(th_design[:, 1:], 9), axis=0)))}
 bounds = {p: {"low": float(th_design[:, j].min()), "high": float(th_design[:, j].max())} for j, p in enumerate(names)}
 folds = list(range(a.folds)) if a.folds else None
-# The inputs come from a discrete design (5 genomes, media on a logarithmic concentration grid), so the
-# admissible region is searched on the product of the observed levels: the experiment cannot take values
-# between them, and a GP fitted to grid data is unconstrained there (its length scales can fall far below
-# the grid spacing), which would let the region leak through every gap between levels.
-# Default support: the design itself.  The media are 29 fixed recipes in which several inputs come from the
-# same salt (NH4+ and SO4 2- from (NH4)2SO4, K+ and PO4 3- from the potassium phosphates), so most points of
-# the product grid of levels, and of the continuous box, are media that do not exist and that no GP fitted
-# to the 29 recipes can predict.  The region is therefore the set of realisable conditions (every genome x
-# medium of the experiment, including those in which no growth was seen) that is admissible.
+# region support: the 145 realisable conditions (default), the product grid of levels, or the continuous box
 support = "continuous" if a.continuous else a.support
 levels = [np.unique(np.round(th_design[:, j], 9)) for j in range(len(names))] if support == "grid" else None
 cands = th_design if support == "design" else None
@@ -177,9 +146,7 @@ J = S.summarise_region(X, acc, names, info, n_sd=a.n_sd, ref_sd=ref_sd)
 res["support"] = {"design": f"design ({len(th_design)} conditions)", "grid": "product grid of levels", "continuous": "continuous box"}[support]
 S.print_region(J, names, f"E. coli, {a.mode}, {res['support']}")
 if support == "design":
-    # On a finite design, identifying the medium fixes all of its components, including those that do not act on
-    # the curve; the direct readout is therefore how many of the realisable conditions remain admissible, and how
-    # many distinct genomes and media they contain.
+    # number of admissible conditions, and of distinct genomes and media among them
     rnd = lambda Z: np.round(Z, 6)
     n_adm = np.array([len(A) for A in acc]); n_gen = np.array([len(np.unique(rnd(A[:, 0]))) for A in acc])
     n_med = np.array([len(np.unique(rnd(A[:, 1:]), axis=0)) if len(A) else 0 for A in acc])

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# combi3D/Simulation/smore/run_calibration.py
 
 import argparse
 import json

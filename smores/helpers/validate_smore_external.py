@@ -1,36 +1,18 @@
 #!/usr/bin/env python3
-# smores/helpers/validate_smore_external.py
-#
-# SMoRe ParS on an external, experimental parameter sweep.
-#
-# WHY THIS DATASET AND NOT TUMOUR GROWTH
-# An earlier attempt used tumour volume measurements. Those are observations,
-# not a sweep: no ground-truth parameters exist behind each trajectory, so only
-# the stage-A surface fit could be checked, never the recovery step that is the
-# point of SMoRe ParS. Patients under immunotherapy also have shrinking
-# tumours, which a saturating-logistic surface cannot represent at all.
-#
-# Gong and Ying (Sci Rep 16:2375, 2025; doi:10.1038/s41598-025-32144-1, CC-BY)
-# published something structurally different: a designed sweep. 870 growth
-# curves of E. coli, 98 time points each, from crossing
-#   - 5 strains of known genome size (N0, N7, N14, N20, N28), with
-#   - 29 chemically defined media of known composition (8 components),
-# in 6 replicates. Every curve has a known input vector, exactly as every ABM
-# run has a known theta, so the whole pipeline applies:
+# SMoRe ParS on an external, experimental parameter sweep: the E. coli growth
+# curves of Gong and Ying (Sci Rep 16:2375, 2025; doi:10.1038/s41598-025-32144-1,
+# CC-BY). 870 curves, 98 time points each, from 5 strains of known genome size
+# (N0, N7, N14, N20, N28) x 29 chemically defined media (8 components), in 6
+# replicates. Every curve has a known input vector, as every ABM run has a
+# known theta:
 #
 #   stage A  fit A/(1+exp(-k(t-t0))) per curve             -> theta_SM
 #   Sobol    which inputs drive the observables
 #   stage B  GP mapping inputs -> theta_SM, leave-one-out  -> recovery
 #
-# This is the analysis run on the burn ABM, applied to laboratory measurements
-# nobody simulated. Bacterial growth is also the regime the surface was made
-# for: lag, exponential, stationary. If recovery fails here, it is not because
-# the functional form is wrong for the data.
-#
-# PUBLISHED REFERENCE POINTS
-# The source paper reports, from gradient-boosted trees and SHAP, that genome
-# size dominates the three growth parameters (K, r, lag), while glucose
-# dominates overall curve shape. Sobol indices here can be read against that.
+# The source paper reports (gradient-boosted trees + SHAP) that genome size
+# dominates the three growth parameters (K, r, lag) and glucose dominates
+# overall curve shape.
 
 import argparse
 import json
@@ -230,10 +212,7 @@ def main():
         if (i + 1) % 200 == 0:
             say(f"      [{i+1}/{len(ids)}] {time.time()-t_start:.0f}s")
 
-    # A flat curve has zero variance, so R2 is undefined for it. Those runs are
-    # kept in theta_SM (the fitted amplitude is near zero, which is the correct
-    # description) but excluded from the fit-quality summary, which would
-    # otherwise be dominated by an undefined quantity.
+    # flat curves (R2 undefined) stay in theta_SM but not in the fit summary
     grew = np.nanmax(Y, axis=1) > 1e-6
     say(f"      {int(grew.sum())}/{len(ids)} curves show growth, "
         f"{int((~grew).sum())} do not")

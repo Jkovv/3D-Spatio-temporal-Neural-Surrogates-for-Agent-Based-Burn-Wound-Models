@@ -1,6 +1,5 @@
-"""Builds the LaTeX tables of the SMoRe ParS part of the paper directly from the result files,
-so that no number in the manuscript is typed by hand.  Also writes numbers.txt: every number
-quoted in the text, with the file and key it comes from.
+"""LaTeX tables of the SMoRe ParS results, built from the result files, plus numbers.txt
+(every number quoted in the text, with its source file and key).
 
 usage:  python smore_strict/make_tables.py --results results_v3 --sobol results/sobol_repmean.json --ecoli-npz results_v3/ecoli_arrays.npz
 output: <results>/tables/*.tex and <results>/tables/numbers.txt
@@ -28,7 +27,7 @@ def pct(x): return "--" if x is None or not np.isfinite(x) else f"${100*x:.0f}\\
 def tex(p): return p.replace("_", "\\_")
 def write(name, s): open(os.path.join(OUT, name), "w").write(s); print(f"  wrote {os.path.join(OUT, name)}")
 
-# ---------------------------------------------------------------- Sobol (per cytokine)
+# Sobol (per cytokine)
 ST_all, ST_max, ST_arg = {}, {}, {}
 if os.path.exists(a.sobol):
     d = json.load(open(a.sobol))["summaries"]; names = d["param_names"]; pf = d["per_feature"]; feats = list(pf)
@@ -63,7 +62,7 @@ if os.path.exists(a.sobol):
 else:
     print(f"  missing {a.sobol}: Sobol columns left empty")
 
-# ---------------------------------------------------------------- main ABM inference
+# main ABM inference
 main = load("smore_main.json")
 if main:
     J = main["jain"]; P = J["params"]
@@ -105,7 +104,7 @@ if main:
         q = J["per_param"][p]
         note(f"main {p}: R2 region / R2 inverse / containment / width", f"{q['r2_median_accepted']:+.3f} / {q.get('r2_inverse_regression', np.nan):+.3f} / {q['coverage95']:.2f} / {q['sd_ratio']:.2f}", "smore_main.json jain.per_param")
 
-# ---------------------------------------------------------------- appendix: variants
+# appendix: variants
 var = [(n, load(f)) for n, f in (("Main", "smore_main.json"), ("Every 5th frame", "smore_main_thin5.json"), ("Quadrature", "smore_quadrature.json"),
                                  ("Top five", "smore_top5.json"), ("One SD", "smore_nsd1.json"))]
 var = [(n, d["jain"]) for n, d in var if d]
@@ -145,7 +144,7 @@ if var:
                 q = J["per_param"][p]
                 note(f"variant {n} {p}: R2 region / containment / width", f"{q['r2_median_accepted']:+.3f} / {q['coverage95']:.2f} / {q['sd_ratio']:.2f}", f"{n} jain.per_param")
 
-# ---------------------------------------------------------------- surrogate in the loop
+# surrogate in the loop
 loops = [(s, load(f"loop_seed{s}.json")) for s in (1, 42, 100)]
 loops = [(s, d) for s, d in loops if d]
 if loops:
@@ -196,7 +195,7 @@ if loops:
 \\end{{table}}
 """)
 
-# ---------------------------------------------------------------- E. coli
+# E. coli
 real, syn, syn4, cont, quad = (load("ecoli_real.json"), load("ecoli_synthetic.json"), load("ecoli_synthetic_4strains.json"),
                                load("ecoli_real_continuous.json"), load("ecoli_real_quadrature.json"))
 if real:

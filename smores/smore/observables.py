@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# combi3D/Simulation/smore/observables.py
-#
 # Loads (theta_ABM, observable_trajectory) pairs from a completed sweep.
 #
 # Each run directory produced by run_sweep.py contains:
@@ -9,9 +7,8 @@
 #   datafiles/cellcount.txt           <- CSV: mcsteps,1..10 (cell-type counts)
 #   LatticeData/CytoStep_*.npz        <- full fields (not needed for scalar SMoRe)
 #
-# The scalar observable used by SMoRe ParS (Jain 2022 style) is the per-cytokine
-# mean-concentration time series il*_mean(t). This module returns, for every run,
-# its theta vector and a (T, 6) array of mean concentrations on a common time grid.
+# Returns, per run, theta and a (T, 6) array of mean concentrations il*_mean(t)
+# on a common time grid.
 
 import json
 import csv
@@ -48,7 +45,7 @@ def _read_theta(run_dir, param_names):
     if not p.exists():
         raise FileNotFoundError(
             f"{run_dir}: no params.json/resolved_params.json -> cannot pair "
-            f"theta with trajectory (this is exactly the desync bug we fixed).")
+            f"theta with trajectory.")
     doc = json.load(open(p))
     params = doc.get("params", doc.get("overrides_from_json", doc))
     missing = [n for n in param_names if n not in params]
@@ -78,7 +75,7 @@ def load_sweep(sim_root, param_names, n_time=None):
         run_ids : list[str]
         t_grid  : (T,) common mcs grid
     Runs missing their observable are skipped with a warning; runs missing
-    params.json raise (we must never silently drop the theta<->trajectory link).
+    params.json raise.
     """
     sim_root = Path(sim_root)
     run_dirs = sorted(d for d in sim_root.iterdir()

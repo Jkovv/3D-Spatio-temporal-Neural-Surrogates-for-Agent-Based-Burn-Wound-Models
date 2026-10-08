@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
-train_unet_3d.py
-
 3D U-Net surrogate for volumetric cytokine fields (thesis architecture).
-Trains on ONE run (chronological 70/10/19 split over its 99 time-windows).
+Trains on one run (chronological 70/10/19 split over its 99 time-windows).
 seed 42 tunes hyperparameters with Optuna; seeds 1 and 100 reuse the seed-42
 configuration to test stability.
 

@@ -5,9 +5,8 @@
 #SBATCH --time=12:00:00
 #SBATCH --account=gisr115048
 #SBATCH --output=smore_v3_ecoli_%j.out
-# External E. coli sweep, v3: per-fold admissible sets and genome classification stored, and the positive
-# control repeated without the 4.63 Mb strain, whose curves end at 24 h instead of 48.5 h (the plateau and
-# midpoint of its synthetic curves are not observable, which is why the genome was not recovered in v2).
+# External E. coli sweep, v3: per-fold admissible sets and genome classification, plus the positive
+# control without the 4.63 Mb strain (its curves end at 24 h instead of 48.5 h).
 # Quick test first:  sbatch --export=ALL,FOLDS=3 run_v3_ecoli.slurm
 set -euo pipefail
 export PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1

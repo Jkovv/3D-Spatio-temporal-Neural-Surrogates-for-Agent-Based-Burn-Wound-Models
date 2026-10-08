@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-"""Trivial one-step baselines for the neural field surrogates (benchmark run run_0062, 50^3).
-
-Every surrogate prediction of frame t is conditioned on the true ABM frames t-1 and t-2, so the
-neural models are compared with two predictors that use the same information and nothing else:
+"""One-step baselines for the field surrogates (run_0062, 50^3):
   persistence           y_hat(t) = y(t-1)
   linear extrapolation  y_hat(t) = max(2 y(t-1) - y(t-2), 0)
-The metrics are computed with calculate_metrics() of the U-Net training script, on the same
-denormalised fields and the same windows (early: samples 80-89 = t82-91 h; late: 90-98 = t92-100 h),
-so the numbers are directly comparable with models/*/res_*.json.
+Metrics from calculate_metrics() of train_unet_3d.py on the same windows as models/*/res_*.json
+(early: samples 80-89 = t82-91 h; late: 90-98 = t92-100 h).
 
 Run from the repository root:  python scripts/persistence_baseline.py
 """
