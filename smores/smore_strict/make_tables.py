@@ -96,6 +96,29 @@ if main:
     s = J["surfaces"]; r = np.array([v["loo_r2"] for v in s.values()], float); w = np.array([v["within_nsd"] for v in s.values()], float)
     note("main: bound surfaces LOO R2 median (min)", f"{np.nanmedian(r):.2f} ({np.nanmin(r):.2f})", "smore_main.json jain.surfaces[*].loo_r2")
     note("main: held-out bounds within the 2 SD band, median (min)", f"{np.nanmedian(w):.2f} ({np.nanmin(w):.2f})", "smore_main.json jain.surfaces[*].within_nsd")
+    CYT_TEX = {"il8": "IL-8", "il6": "IL-6", "il10": "IL-10", "tnf": "TNF-$\\alpha$", "tgf": "TGF-$\\beta$"}
+    PAR_TEX = {"c0": "$c_0$", "p": "$p$", "k": "$k$", "lam": "$\\lambda$", "A": "$A$", "r": "$r$", "t0": "$t_0$"}
+    def sf(v): return "--" if v is None or not np.isfinite(v) else f"${v:+.2f}$"
+    srows = []
+    for key in [k for k in s if k.endswith("_lo")]:
+        base = key[:-3]; cyt, par = base.split("_", 1); lo_, hi_ = s[base + "_lo"], s[base + "_hi"]
+        srows.append(f"{CYT_TEX.get(cyt, cyt)} & {PAR_TEX.get(par, par)} & {lo_['n_evaluated']} & {sf(lo_['loo_r2'])} & {f2(lo_['within_nsd'])} & "
+                     f"{sf(hi_['loo_r2'])} & {f2(hi_['within_nsd'])} \\\\")
+        note(f"main surface {base}: LOO R2 lower / upper, within 2 SD lower / upper, n", f"{lo_['loo_r2']:+.3f} / {hi_['loo_r2']:+.3f}, {lo_['within_nsd']:.2f} / {hi_['within_nsd']:.2f}, {lo_['n_evaluated']}", "smore_main.json jain.surfaces")
+    dropped = ", ".join(tex(d) for d in J.get("surfaces_dropped", [])) or "none"
+    write("tab_surfaces.tex", f"""\\begin{{table}}[!htbp]
+\\caption{{Leave-one-out accuracy of the Gaussian-process bound surfaces in the main inference. For every SM parameter, the lower and upper 95\\% profile-likelihood bound is interpolated over the ten ABM parameters; $R^2$ compares the interpolated bound at the held-out point with its fitted bound over the $n$ folds in which that bound is defined, and the band column gives the share of held-out bounds within two predictive standard deviations (the widening used in the region search). A low $R^2$ with a high band share means that the bound varies little across the sweep relative to its scatter, so the surface carries little constraint but is not over-confident. Surfaces dropped for lack of identified library points: {dropped}.}}
+\\label{{tab:surfaces}}
+\\centering\\footnotesize
+\\begin{{tabular}}{{llccccc}}
+\\toprule
+\\textbf{{Cytokine}} & \\textbf{{SM param.}} & $\\mathbf{{n}}$ & $\\mathbf{{R^2}}$ \\textbf{{lower}} & \\textbf{{band lower}} & $\\mathbf{{R^2}}$ \\textbf{{upper}} & \\textbf{{band upper}} \\\\
+\\midrule
+{chr(10).join(srows)}
+\\bottomrule
+\\end{{tabular}}
+\\end{{table}}
+""")
     note("main: folds that needed the hit-and-run fallback", str(sum(1 for i in J["sampler_info"] if i.get("mcmc_steps", 0) > 0)), "smore_main.json jain.sampler_info")
     note("main: max R-hat over folds", f"{J['rhat_max_over_folds']}", "smore_main.json jain.rhat_max_over_folds")
     note("main: folds excluded from sample statistics (chain not converged)", str(J.get("n_nonconverged", "n/a")), "smore_main.json jain.n_nonconverged")
@@ -174,6 +197,15 @@ if loops:
             if J: note(f"loop seed {s} {arm}: non-empty / true vector admissible / volume fraction median / R2 keil8 / R2 init_ec",
                        f"{J['n_nonempty']}/{J['n_folds']} / {J['truth_admissible_all_folds']:.2f} / {J['volume_fraction']['median']:.3f} / "
                        f"{J['per_param']['keil8']['r2_median_accepted']:+.3f} / {J['per_param']['init_ec']['r2_median_accepted']:+.3f}", f"loop_seed{s}.json arms.{arm}")
+    uncl = load("smore_il8_unclipped.json")
+    if uncl:
+        U = uncl["jain"]; rg = U.get("ridge", {})
+        rows.append(f"ABM output, unclipped scale & {100*U['n_nonempty']/U['n_folds']:.0f} & {100*U['truth_admissible_all_folds']:.0f} & "
+                    f"{100*U['volume_fraction']['median']:.0f} & {U['per_param']['keil8']['r2_median_accepted']:+.2f} & {U['per_param']['init_ec']['r2_median_accepted']:+.2f} \\\\")
+        note("loop, ABM unclipped (IL-8 only, 99 points): non-empty / admissible / volume fraction median / R2 keil8 / R2 init_ec / ridge width sum / difference",
+             f"{U['n_nonempty']}/{U['n_folds']} / {U['truth_admissible_all_folds']:.2f} / {U['volume_fraction']['median']:.3f} / "
+             f"{U['per_param']['keil8']['r2_median_accepted']:+.3f} / {U['per_param']['init_ec']['r2_median_accepted']:+.3f} / "
+             f"{rg.get('sd_ratio_sum', np.nan):.3f} / {rg.get('sd_ratio_difference', np.nan):.3f}", "smore_il8_unclipped.json jain")
     err = " / ".join(f"{100*np.mean(d['surrogate_rel_rms']):.1f}" for _, d in loops)
     val = " / ".join(f"{100*d['tolerance']['val_rel_rms'][0]:.1f}" for _, d in loops)
     tr2 = " / ".join(f"{np.mean(d['surrogate_traj_r2']):.3f}" for _, d in loops)
@@ -181,7 +213,7 @@ if loops:
         note(f"loop seed {s}: surrogate relative RMS error mean / validation-frame error on run_0062 / trajectory R2 mean",
              f"{np.mean(d['surrogate_rel_rms']):.4f} / {d['tolerance']['val_rel_rms'][0]:.4f} / {np.mean(d['surrogate_traj_r2']):.3f}", f"loop_seed{s}.json")
     write("tab_loop.tex", f"""\\begin{{table}}[!htbp]
-\\caption{{Surrogate in the loop, IL-8 only, leave-one-out over the {loops[0][1]['n_points']} sweep points other than the surrogate's training run; values for the training seeds {' / '.join(str(s) for s, _ in loops)}. The library of bound surfaces always comes from the ABM; only the data interval of the held-out point changes. Relative RMS error of the surrogate's volume-averaged trajectory over the sweep: {err}\\%; on the validation frames of its own training run: {val}\\%; trajectory $R^2$: {tr2}. Non-empty: share of points with a non-empty admissible region. Admissible: share of points whose true parameter vector lies in the region. Volume, $R^2$: median share of the parameter box covered by the region, and $R^2$ of the region median, given only for arms in which the true vector lies in the region in at least 90\\% of points.}}
+\\caption{{Surrogate in the loop, IL-8 only, leave-one-out over the {loops[0][1]['n_points']} sweep points other than the surrogate's training run; values for the training seeds {' / '.join(str(s) for s, _ in loops)}. The library of bound surfaces always comes from the ABM; only the data interval of the held-out point changes. ABM output, unclipped scale: the same IL-8-only inference on the volume averages without clipping (no surrogate involved; one value). Relative RMS error of the surrogate's volume-averaged trajectory over the sweep: {err}\\%; on the validation frames of its own training run: {val}\\%; trajectory $R^2$: {tr2}. Non-empty: share of points with a non-empty admissible region. Admissible: share of points whose true parameter vector lies in the region. Volume, $R^2$: median share of the parameter box covered by the region, and $R^2$ of the region median, given only for arms in which the true vector lies in the region in at least 90\\% of points.}}
 \\label{{tab:loop}}
 \\centering\\footnotesize
 \\setlength{{\\tabcolsep}}{{4pt}}

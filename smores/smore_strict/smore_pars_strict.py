@@ -693,10 +693,23 @@ def main():
     ap.add_argument("--rhat-target", type=float, default=1.1)
     ap.add_argument("--mcmc-max-steps", type=int, default=16000)   # cap on hit-and-run steps per walker
     ap.add_argument("--n-walkers", type=int, default=20)
+    ap.add_argument("--cyts", nargs="+", default=None)          # subset of cytokines, e.g. il8
+    ap.add_argument("--exclude", nargs="*", default=[])         # sweep points left out entirely
+    ap.add_argument("--subsample", type=int, default=None)      # first k points of a fixed random permutation
+    ap.add_argument("--subsample-seed", type=int, default=0)
     a = ap.parse_args()
     SIGMA_MODE = a.sigma_mode
     D = np.load(a.replicates_npz, allow_pickle=True)
     Y, runs, cyts = D["Y"], [str(r) for r in D["runs"]], [str(c) for c in D["cyts"]]   # Y: (n, R, T, C)
+    if a.cyts:
+        Y = Y[:, :, :, [cyts.index(c) for c in a.cyts]]; cyts = list(a.cyts)
+    keep = np.arange(len(runs))
+    if a.subsample:
+        keep = np.sort(np.random.default_rng(a.subsample_seed).permutation(len(runs))[:a.subsample])
+    keep = [i for i in keep if runs[i] not in set(a.exclude)]
+    if len(keep) < len(runs):
+        Y = Y[keep]; runs = [runs[i] for i in keep]
+        print(f"using {len(runs)} of {len(D['runs'])} sweep points (subsample {a.subsample}, excluded {a.exclude})", flush=True)
     m = json.load(open(a.manifest)); names, bounds = m["param_names"], m["bounds"]
     pmap = {r["run_id"]: r["params"] for r in m["runs"]}
     theta_all = np.array([[pmap[r][p] for p in names] for r in runs], float)
@@ -723,6 +736,7 @@ def main():
         print(f"saved SM fits to {cache}", flush=True)
     for name in CYT_SM:
         ff = [f[name] for f in fits if f.get(name)]
+        if not ff: continue
         r2 = [f["r2"] for f in ff]; chi2 = [f["chi2"] for f in ff]
         det = sum(f.get("deterministic", False) for f in ff)
         print(f"  SM fit {name:5s} ({CYT_SM[name]}): median R2 {np.median(r2):.3f}, min {np.min(r2):.3f}; "

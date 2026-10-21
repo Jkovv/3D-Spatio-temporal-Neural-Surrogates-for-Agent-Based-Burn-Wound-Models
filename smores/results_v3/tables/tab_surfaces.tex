@@ -1,0 +1,27 @@
+\begin{table}[!htbp]
+\caption{Leave-one-out accuracy of the Gaussian-process bound surfaces in the main inference. For every SM parameter, the lower and upper 95\% profile-likelihood bound is interpolated over the ten ABM parameters; $R^2$ compares the interpolated bound at the held-out point with its fitted bound over the $n$ folds in which that bound is defined, and the band column gives the share of held-out bounds within two predictive standard deviations (the widening used in the region search). A low $R^2$ with a high band share means that the bound varies little across the sweep relative to its scatter, so the surface carries little constraint but is not over-confident. Surfaces dropped for lack of identified library points: il10\_c0, il6\_c0.}
+\label{tab:surfaces}
+\centering\footnotesize
+\begin{tabular}{llccccc}
+\toprule
+\textbf{Cytokine} & \textbf{SM param.} & $\mathbf{n}$ & $\mathbf{R^2}$ \textbf{lower} & \textbf{band lower} & $\mathbf{R^2}$ \textbf{upper} & \textbf{band upper} \\
+\midrule
+IL-8 & $c_0$ & 100 & $+1.00$ & $1.00$ & $+1.00$ & $1.00$ \\
+IL-8 & $p$ & 100 & $+1.00$ & $1.00$ & $+1.00$ & $1.00$ \\
+IL-8 & $k$ & 100 & $+0.22$ & $0.88$ & $+0.04$ & $0.93$ \\
+IL-8 & $\lambda$ & 100 & $-0.07$ & $0.92$ & $+0.21$ & $0.89$ \\
+IL-6 & $c_0$ & 0 & -- & -- & -- & -- \\
+IL-6 & $p$ & 100 & $+0.86$ & $0.94$ & $+0.86$ & $0.94$ \\
+IL-6 & $k$ & 100 & $-0.11$ & $0.85$ & $-0.01$ & $0.86$ \\
+IL-10 & $c_0$ & 0 & -- & -- & -- & -- \\
+IL-10 & $p$ & 100 & $+0.86$ & $0.97$ & $+0.86$ & $0.96$ \\
+IL-10 & $k$ & 100 & $-0.13$ & $0.85$ & $-0.01$ & $0.86$ \\
+TNF-$\alpha$ & $c_0$ & 61 & $+0.14$ & $0.90$ & $+0.56$ & $0.89$ \\
+TNF-$\alpha$ & $p$ & 100 & $+0.90$ & $0.91$ & $+0.89$ & $0.92$ \\
+TNF-$\alpha$ & $k$ & 96 & $-0.34$ & $0.84$ & $+0.06$ & $0.83$ \\
+TGF-$\beta$ & $A$ & 100 & $+0.91$ & $0.96$ & $+0.92$ & $0.97$ \\
+TGF-$\beta$ & $r$ & 100 & $-0.18$ & $0.91$ & $-0.16$ & $0.93$ \\
+TGF-$\beta$ & $t_0$ & 100 & $-0.28$ & $0.88$ & $-0.27$ & $0.87$ \\
+\bottomrule
+\end{tabular}
+\end{table}

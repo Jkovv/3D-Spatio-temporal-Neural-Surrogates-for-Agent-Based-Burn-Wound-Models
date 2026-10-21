@@ -418,6 +418,11 @@ def assemble(args):
         train_targets.append(r["Y_raw"][:n].reshape(-1, 6))
     cmax, kappas, qs, cmax_raw = fit_cmax_per_cytokine(
         np.concatenate(train_targets, axis=0))
+    if args.no_clip:
+        # linear scale only: cmax above the training-run maximum so that other sweep runs are not clipped either
+        cmax = args.scale_margin * cmax_raw
+        qs = [None] * 6
+        print(f"[info] no clipping: cmax = {args.scale_margin} x true maximum of the training run")
     print(f"\n[info] per-cytokine clip (fit on train split):")
     for name, v, k, q in zip(CYTOKINE_NAMES, cmax, kappas, qs):
         qstr = "no-clip" if q is None else f"p{q}"
@@ -500,6 +505,11 @@ def parse_args():
                         "inference with the trained surrogate's normalisation.")
     p.add_argument("--runs", nargs="+", default=None,
                    help="Process only these run_XXXX names.")
+    p.add_argument("--no-clip", action="store_true",
+                   help="No percentile clipping: scale linearly with cmax = "
+                        "--scale-margin x the true maximum of the training run.")
+    p.add_argument("--scale-margin", type=float, default=2.0,
+                   help="Headroom factor for --no-clip (default 2.0).")
     return p.parse_args()
 
 
