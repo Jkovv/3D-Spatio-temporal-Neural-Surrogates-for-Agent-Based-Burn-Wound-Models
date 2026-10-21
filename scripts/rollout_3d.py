@@ -58,6 +58,7 @@ def rollout(kind, model, Xb, Xt, idx, start):
 
 
 def r2_per_step(yt, yp):
+    yp = np.maximum(yp, 0.0)                                   # as in calculate_metrics
     return [float(1 - ((a - b) ** 2).sum() / max(((a - a.mean()) ** 2).sum(), 1e-30)) for a, b in zip(yt, yp)]
 
 

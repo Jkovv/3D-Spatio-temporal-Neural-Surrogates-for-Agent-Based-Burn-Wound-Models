@@ -1,0 +1,18 @@
+\begin{table}[!htbp]
+\caption{Autoregressive rollout from window 80 ($t=82$\,h): the predicted cytokine channel is fed back into the inputs of the following windows, the other channels and the cell masks still come from the ABM. Global $R^2$ in the early ($t=82$-91\,h, 1-10 steps ahead) and late ($t=92$-100\,h, 11-19 steps) windows; persistence holds the last true frame. Teacher-forced one-step values are in Table~\ref{tab:results_3d}.}
+\label{tab:rollout}
+\centering\footnotesize
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{IL-8}} & \multicolumn{2}{c}{\textbf{IL-10}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+\textbf{Predictor} & \textbf{early} & \textbf{late} & \textbf{early} & \textbf{late} \\
+\midrule
+Persistence & $0.996$ & $0.980$ & $0.781$ & $0.585$ \\
+DeepONet, seed 1 & $0.949$ & $0.565$ & $0.400$ & $0.138$ \\
+DeepONet, seed 42 & $0.983$ & $0.547$ & $0.873$ & $0.816$ \\
+DeepONet, seed 100 & $0.994$ & $0.945$ & $0.369$ & $0.126$ \\
+U-Net, seed 42 & $-0.094$ & $<-10$ & $0.373$ & $0.121$ \\
+\bottomrule
+\end{tabular}
+\end{table}
