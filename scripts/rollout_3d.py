@@ -81,9 +81,9 @@ def main():
 
     for cyt in a.cytokines:
         idx = CYTS.index(cyt); cmax = float(meta["scaling"]["max"][idx])
-        Yt = DON.denormalize(Y[s:, ..., idx], cmax)
+        Yt = DON.denormalize(Y[s:, ..., idx:idx + 1], cmax)                       # (N-s, G, G, G, 1)
         # persistence rollout: the last true frame before the start, repeated
-        Yp_pers = DON.denormalize(np.repeat(Xb[s:s + 1, 1, ..., idx], Y.shape[0] - s, axis=0), cmax)
+        Yp_pers = DON.denormalize(np.repeat(Xb[s:s + 1, 1, ..., idx:idx + 1], Y.shape[0] - s, axis=0), cmax)
         res_pers = {k: DON.calculate_metrics(Yt[lo - s:hi - s], Yp_pers[lo - s:hi - s], M[lo:hi], cmax)
                     for k, (lo, hi) in windows.items()}
         res_pers["r2_per_step"] = r2_per_step(Yt, Yp_pers)
@@ -96,7 +96,7 @@ def main():
                     print(f"[skip] {kind} {cyt} seed {seed}: no weights"); continue
                 t0 = time.time()
                 model = load_model(kind, wdir, cyt, a.run, a.grid, seed)
-                Yp = DON.denormalize(rollout(kind, model, Xb, Xt, idx, s), cmax)
+                Yp = DON.denormalize(rollout(kind, model, Xb, Xt, idx, s)[..., None], cmax)
                 res = {k: DON.calculate_metrics(Yt[lo - s:hi - s], Yp[lo - s:hi - s], M[lo:hi], cmax)
                        for k, (lo, hi) in windows.items()}
                 res["r2_per_step"] = r2_per_step(Yt, Yp)
