@@ -103,6 +103,7 @@ loop seed 100 sur_conf: non-empty / true vector admissible / volume fraction med
 loop seed 1 abm_err_conf: non-empty / true vector admissible / volume fraction median / R2 keil8 / R2 init_ec: 99/99 / 1.00 / 0.689 / +0.262 / +0.358    [loop_seed1.json arms.abm_err_conf]
 loop seed 42 abm_err_conf: non-empty / true vector admissible / volume fraction median / R2 keil8 / R2 init_ec: 99/99 / 1.00 / 0.464 / +0.354 / +0.422    [loop_seed42.json arms.abm_err_conf]
 loop seed 100 abm_err_conf: non-empty / true vector admissible / volume fraction median / R2 keil8 / R2 init_ec: 99/99 / 1.00 / 0.543 / +0.307 / +0.407    [loop_seed100.json arms.abm_err_conf]
+loop, ABM unclipped (IL-8 only, 99 points): non-empty / admissible / volume fraction median / R2 keil8 / R2 init_ec / ridge width sum / difference: 99/99 / 1.00 / 0.004 / +0.484 / +0.498 / 0.058 / 0.970    [smore_il8_unclipped.json jain]
 loop seed 1: surrogate relative RMS error mean / validation-frame error on run_0062 / trajectory R2 mean: 0.0371 / 0.0080 / 0.976    [loop_seed1.json]
 loop seed 42: surrogate relative RMS error mean / validation-frame error on run_0062 / trajectory R2 mean: 0.0563 / 0.0090 / 0.928    [loop_seed42.json]
 loop seed 100: surrogate relative RMS error mean / validation-frame error on run_0062 / trajectory R2 mean: 0.0409 / 0.0084 / 0.962    [loop_seed100.json]

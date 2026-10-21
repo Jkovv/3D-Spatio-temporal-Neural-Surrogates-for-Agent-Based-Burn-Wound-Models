@@ -201,7 +201,7 @@ if loops:
     if uncl:
         U = uncl["jain"]; rg = U.get("ridge", {})
         rows.append(f"ABM output, unclipped scale & {100*U['n_nonempty']/U['n_folds']:.0f} & {100*U['truth_admissible_all_folds']:.0f} & "
-                    f"{100*U['volume_fraction']['median']:.0f} & {U['per_param']['keil8']['r2_median_accepted']:+.2f} & {U['per_param']['init_ec']['r2_median_accepted']:+.2f} \\\\")
+                    f"{100*U['volume_fraction']['median']:.1f} & {U['per_param']['keil8']['r2_median_accepted']:+.2f} & {U['per_param']['init_ec']['r2_median_accepted']:+.2f} \\\\")
         note("loop, ABM unclipped (IL-8 only, 99 points): non-empty / admissible / volume fraction median / R2 keil8 / R2 init_ec / ridge width sum / difference",
              f"{U['n_nonempty']}/{U['n_folds']} / {U['truth_admissible_all_folds']:.2f} / {U['volume_fraction']['median']:.3f} / "
              f"{U['per_param']['keil8']['r2_median_accepted']:+.3f} / {U['per_param']['init_ec']['r2_median_accepted']:+.3f} / "
