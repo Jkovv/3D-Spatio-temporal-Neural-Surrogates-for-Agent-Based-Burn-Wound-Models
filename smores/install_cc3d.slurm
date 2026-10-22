@@ -49,7 +49,7 @@ conda activate "$ENV_NAME"
 
 # 3. FiPy + calibration deps (pip) ------------------------------------------
 echo "[install] installing FiPy + calibration packages..."
-pip install --no-input fipy scipy scikit-learn SALib
+pip install --no-input "numpy<2" fipy scipy scikit-learn SALib   # cc3d is built against NumPy 1
 
 # 4. smoke test --------------------------------------------------------------
 echo "[install] smoke test..."
