@@ -80,9 +80,9 @@ def main():
         ax.grid(axis="y", color="#e5e5e5", lw=0.5, zorder=0)
     axes[0].set_ylabel("global $R^2$")
     h, l = axes[0].get_legend_handles_labels()
-    fig.legend(h, l, loc="lower center", frameon=False, ncol=len(h), bbox_to_anchor=(0.5, 0.0))
+    fig.legend(h, l, loc="lower center", frameon=False, ncol=4, bbox_to_anchor=(0.5, 0.0))
     axes[0].text(1, Y_FLOOR + 0.04, f"triangles: $R^2 < {Y_FLOOR}$", fontsize=6, color="#555555", va="bottom")
-    fig.tight_layout(rect=[0, 0.08, 1, 1])
+    fig.tight_layout(rect=[0, 0.13, 1, 1])
     Path(a.figdir).mkdir(parents=True, exist_ok=True)
     out = Path(a.figdir) / "F6_rollout.png"; fig.savefig(out); print(f"wrote {out}")
 
