@@ -3,7 +3,7 @@
   "cytokine": "il10",
   "seed": 42,
   "start_window": 80,
-  "rollout_time_seconds": 6.5,
+  "rollout_time_seconds": 4.7,
   "results": {
     "Near_Horizon_t82_t91": {
       "Global_R2": 0.37340823251690736,
