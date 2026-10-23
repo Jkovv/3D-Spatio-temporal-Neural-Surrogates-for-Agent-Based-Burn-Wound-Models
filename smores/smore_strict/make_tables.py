@@ -127,6 +127,40 @@ if main:
         q = J["per_param"][p]
         note(f"main {p}: R2 region / R2 inverse / containment / width", f"{q['r2_median_accepted']:+.3f} / {q.get('r2_inverse_regression', np.nan):+.3f} / {q['coverage95']:.2f} / {q['sd_ratio']:.2f}", "smore_main.json jain.per_param")
 
+# learning curve: the main inference on nested subsamples of the sweep
+lc = [(n, load(f"smore_main_n{n}.json")) for n in (60, 70, 80, 90)] + [(100, main)]
+lc = [(n, d["jain"]) for n, d in lc if d]
+if len(lc) > 1:
+    P = lc[-1][1]["params"]
+    order = sorted(P, key=lambda p: -ST_all.get(p, 0))
+    head = " & ".join(f"$n={n}$" for n, _ in lc)
+    rows = [f"{tex(p)} & " + " & ".join(f"${J['per_param'][p]['r2_median_accepted']:+.2f}$" for _, J in lc) + " \\\\" for p in order]
+    rows.append("\\midrule")
+    rows.append("Width along \\texttt{init\\_ec}$+$\\texttt{keil8} & " + " & ".join(f"${J['ridge']['sd_ratio_sum']:.3f}$" for _, J in lc) + " \\\\")
+    rows.append("Width along \\texttt{init\\_ec}$-$\\texttt{keil8} & " + " & ".join(f"${J['ridge']['sd_ratio_difference']:.2f}$" for _, J in lc) + " \\\\")
+    rows.append("True vector admissible & " + " & ".join(f"${100*J['truth_admissible_all_folds']:.0f}\\%$" for _, J in lc) + " \\\\")
+    rows.append("Bound surfaces, median LOO $R^2$ & " + " & ".join(f"${np.nanmedian([v['loo_r2'] for v in J['surfaces'].values()]):.2f}$" for _, J in lc) + " \\\\")
+    rows.append("Held-out bounds within 2 SD, median & " + " & ".join(f"${np.nanmedian([v['within_nsd'] for v in J['surfaces'].values()]):.2f}$" for _, J in lc) + " \\\\")
+    body = "\n".join(rows)
+    write("tab_learning_curve.tex", f"""\\begin{{table}}[!htbp]
+\\caption{{SMoRe ParS on nested random subsamples of the sweep (same settings as Table~\\ref{{tab:recovery}}; the subsamples are the first $n$ points of one fixed permutation, and leave-one-out runs over the $n$ points). Rows 1-10: $R^2$ of the region median against the true value. The widths along the sum and difference of \\texttt{{init\\_ec}} and \\texttt{{keil8}} are given with both scaled to $[0,1]$.}}
+\\label{{tab:learning_curve}}
+\\centering\\footnotesize
+\\begin{{tabular}}{{l{'c' * len(lc)}}}
+\\toprule
+\\textbf{{Parameter}} & {head} \\\\
+\\midrule
+{body}
+\\bottomrule
+\\end{{tabular}}
+\\end{{table}}
+""")
+    for n, J in lc:
+        note(f"learning curve n={n}: true vector admissible / ridge width sum / difference / R2 sigmoidb / R2 keil8 / R2 init_ec",
+             f"{J['truth_admissible_all_folds']:.2f} / {J['ridge']['sd_ratio_sum']:.3f} / {J['ridge']['sd_ratio_difference']:.3f} / "
+             f"{J['per_param']['sigmoidb']['r2_median_accepted']:+.3f} / {J['per_param']['keil8']['r2_median_accepted']:+.3f} / "
+             f"{J['per_param']['init_ec']['r2_median_accepted']:+.3f}", f"smore_main_n{n}.json jain" if n < 100 else "smore_main.json jain")
+
 # appendix: variants
 var = [(n, load(f)) for n, f in (("Main", "smore_main.json"), ("Every 5th frame", "smore_main_thin5.json"), ("Quadrature", "smore_quadrature.json"),
                                  ("Top five", "smore_top5.json"), ("One SD", "smore_nsd1.json"))]
