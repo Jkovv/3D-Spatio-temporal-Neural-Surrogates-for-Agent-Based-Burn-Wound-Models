@@ -13,9 +13,7 @@ import sys, json, argparse
 from pathlib import Path
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rollout_3d as R
-DON = R.DON
+R = DON = None                                                       # imported in main(), so that --table-only needs no TensorFlow
 
 WINDOWS = {"Near_Horizon_t82_t91": (80, 90), "Far_Horizon_t92_t100": (90, 99)}
 LBL = {("deeponet", "clip"): "DeepONet, clipped", ("deeponet", "noclip"): "DeepONet, unclipped",
@@ -49,9 +47,17 @@ def main():
     ap.add_argument("--run", default="run_0062"); ap.add_argument("--grid", type=int, default=50)
     ap.add_argument("--start", type=int, default=80); ap.add_argument("--cytokines", nargs="+", default=["il8"])
     ap.add_argument("--seeds", nargs="+", type=int, default=[42, 1, 100])
+    ap.add_argument("--table-only", action="store_true")                 # rebuild the table from clip_comparison.json
     a = ap.parse_args()
+    mdir = Path(a.models)
+    if a.table_only:
+        write_table(json.load(open(mdir / "clip_comparison.json")), mdir / "tab_clip_comparison.tex", mdir); return
+    global R, DON
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import rollout_3d as R
+    DON = R.DON
     data = {s: load(Path(a.work) / f"prep_{s}", a.run, a.grid) for s in ("clip", "noclip")}
-    mdir = Path(a.models); s0 = a.start
+    s0 = a.start
     out = {"run": a.run, "start_window": s0, "cytokines": {}}
 
     for cyt in a.cytokines:
@@ -107,20 +113,27 @@ def main():
     mdir.mkdir(parents=True, exist_ok=True)
     json.dump(out, open(mdir / "clip_comparison.json", "w"), indent=1, default=float)
     print(f"saved {mdir / 'clip_comparison.json'}")
-    write_table(out, mdir / "tab_clip_comparison.tex")
+    write_table(out, mdir / "tab_clip_comparison.tex", mdir)
 
 
-def write_table(out, path):
+def write_table(out, path, mdir=None):
     e, l = "Near_Horizon_t82_t91", "Far_Horizon_t92_t100"
     def cell(vals):
         v = np.array([x for x in vals if np.isfinite(x)])
         if not v.size: return "--"
         f = lambda x: f"{x:.3f}" if x > -10 else "<-10"
         return f"${f(v.mean())}$" if v.size == 1 else f"${f(v.mean())}$ ({f(v.min())}-{f(v.max())})"
+    ceil = {}
+    if mdir is not None and (Path(mdir) / "clip_ceiling.json").exists():
+        ceil = json.load(open(Path(mdir) / "clip_ceiling.json"))
     blocks = []
     for cyt, res in out["cytokines"].items():
         b = res["baselines"]["unclipped_truth"]
-        rows = [f"Persistence & ${b['persistence'][e]['Global_R2']:.3f}$ & ${b['persistence'][l]['Global_R2']:.3f}$ & "
+        rows = []
+        if cyt in ceil:
+            rows.append(f"Clipped field itself (upper bound) & ${ceil[cyt][e]['r2_clipped_field_vs_full']:.3f}$ & "
+                        f"${ceil[cyt][l]['r2_clipped_field_vs_full']:.3f}$ & -- & -- \\\\")
+        rows += [f"Persistence & ${b['persistence'][e]['Global_R2']:.3f}$ & ${b['persistence'][l]['Global_R2']:.3f}$ & "
                 f"${b['persistence_rollout'][e]['Global_R2']:.3f}$ & ${b['persistence_rollout'][l]['Global_R2']:.3f}$ \\\\",
                 f"Linear extrapolation & ${b['linear_extrapolation'][e]['Global_R2']:.3f}$ & ${b['linear_extrapolation'][l]['Global_R2']:.3f}$ & -- & -- \\\\"]
         for key, lbl in (("deeponet_clip", "DeepONet, clipped"), ("deeponet_noclip", "DeepONet, unclipped"),
@@ -134,7 +147,7 @@ def write_table(out, path):
                       f"{100*res['test_active_voxels_above_clip']:.1f}\\% of active test voxels above it)}} \\\\\n" + "\n".join(rows))
     body = "\n\\midrule\n".join(blocks)
     path.write_text(f"""\\begin{{table}}[!htbp]
-\\caption{{Clipped vs unclipped normalisation on a second realisation of the benchmark point (run~0062, same parameters). Each network is trained and tuned (same Optuna search space) on its own normalisation, and every row is scored against the same unclipped ground truth: global $R^2$ one step ahead (teacher forcing) and in an autoregressive rollout from $t={out['start_window'] + 2}$\\,h, in the early ($t=82$-91\\,h) and late ($t=92$-100\\,h) windows. Networks: mean over seeds 1, 42 and 100, range in brackets.}}
+\\caption{{Clipped vs unclipped normalisation on a second realisation of the benchmark point (run~0062, same parameters). Each network is trained and tuned (same Optuna search space) on its own normalisation, and every row is scored against the same unclipped ground truth: global $R^2$ one step ahead (teacher forcing) and in an autoregressive rollout from $t={out['start_window'] + 2}$\\,h, in the early ($t=82$-91\\,h) and late ($t=92$-100\\,h) windows. Networks: mean over seeds 1, 42 and 100, range in brackets. Clipped field itself: the clipped target scored against the full field, the highest $R^2$ any predictor of the clipped field can reach.}}
 \\label{{tab:clip_comparison}}
 \\centering\\footnotesize
 \\begin{{tabular}}{{lcccc}}
