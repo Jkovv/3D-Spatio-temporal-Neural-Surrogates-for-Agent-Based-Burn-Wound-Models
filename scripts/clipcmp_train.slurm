@@ -8,14 +8,15 @@
 #SBATCH --output=clipcmp_train_%j.out
 # Clipped vs unclipped normalisation, step 2: one model on one normalisation.
 #   sbatch --export=ALL,MODEL=deeponet,SCALE=clip  clipcmp_train.slurm
-#   MODEL = deeponet | unet, SCALE = clip | noclip, CYTS (default "il8")
+#   MODEL = deeponet | unet, SCALE = clip | noclip, CYTS (default "il8"); WORK and OUTROOT override the paths
 # Seed 42 runs Optuna (same search space as the main benchmark), seeds 1 and 100 reuse its HP.
 set -euo pipefail
 export PYTHONUNBUFFERED=1
 : "${MODEL:?set MODEL}"; : "${SCALE:?set SCALE}"; CYTS="${CYTS:-il8}"
 BASE=/gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models
-WORK=/gpfs/scratch1/shared/jkowalczuk/clipcmp
-OUT=$BASE/models/clip_comparison/${MODEL}_${SCALE}
+WORK="${WORK:-/gpfs/scratch1/shared/jkowalczuk/clipcmp}"
+OUTROOT="${OUTROOT:-$BASE/models/clip_comparison}"
+OUT=$OUTROOT/${MODEL}_${SCALE}
 module purge
 module load 2023
 module load TensorFlow/2.15.1-foss-2023a-CUDA-12.1.1
