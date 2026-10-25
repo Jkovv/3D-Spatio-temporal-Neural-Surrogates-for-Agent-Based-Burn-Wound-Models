@@ -36,7 +36,7 @@ All ABM results come from one 100-point Latin-hypercube design (`smores/manifest
 │   └── persistence_baseline_run_0062_50.json, forward_numbers.json
 ├── scripts/     # preprocessing, training, evaluation, figures; scripts/v2/ is the chain that produced the field results
 ├── preprocessed_3d/run_0062/50x50x50/metadata.json   # scales of the benchmark run (clipped); the unclipped scale is models/clip_comparison/metadata_noclip.json
-├── figures/     # the manuscript figures (PNG)
+├── figures/     # the manuscript figures (PNG and PDF)
 ├── figures_3d/  # individual panels the manuscript figures are assembled from
 └── smores/      # sweep, sensitivity analysis and SMoRe ParS (see smores/README.md)
 ```
@@ -45,7 +45,7 @@ All ABM results come from one 100-point Latin-hypercube design (`smores/manifest
 
 **`scripts/v2/`** is the chain that produced every field-based result, submitted as one set of dependent Slurm jobs by `run_all.sh`: the 100 ABM runs, preprocessing of the benchmark run and of every sweep point on its frozen scale (clipped and unclipped), training of both networks on both normalisations, DeepONet predictions at every sweep point, the surrogate-in-the-loop inference, and the evaluation (`eval.slurm`). `run_from_training.sh` repeats the chain from the training step on the existing fields, `collect.sh` copies the results into the directories below and rebuilds the tables, and `figures.slurm` rebuilds the figures and the field statistics.
 
-**`figures/`**: one PNG per manuscript figure. File numbers follow the order in which the figures were made, not their numbering in the paper.
+**`figures/`**: one PNG and one PDF per manuscript figure (the PDFs are vector except `fig2`, which is hand-drawn). File numbers follow the order in which the figures were made, not their numbering in the paper.
 
 | File | Content |
 |---|---|
