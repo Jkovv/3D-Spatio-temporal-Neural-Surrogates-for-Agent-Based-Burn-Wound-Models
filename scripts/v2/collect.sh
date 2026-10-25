@@ -6,7 +6,7 @@ set -euo pipefail
 BASE=/gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models
 cd $BASE
 
-for f in models/v2/clip_comparison.json models/v2/rollout_3d/tab_rollout.tex models/v2/persistence_baseline_run_0062_50.json \
+for f in models/v2/clip_comparison.json models/v2/rollout_3d/rollout_unet_il10_run_0062_50_100.json models/v2/persistence_baseline_run_0062_50.json \
          smores/results_v3/v2/loop_clip_seed100.json smores/results_v3/v2/loop_noclip_seed100.json; do
     [ -f $f ] || { echo "missing $f: the chain has not finished"; exit 1; }
 done
