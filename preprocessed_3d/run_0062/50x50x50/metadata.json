@@ -1,0 +1,83 @@
+{
+  "grid": 50,
+  "n_samples": 99,
+  "run": "run_0062",
+  "train_n": 70,
+  "cytokine_names": [
+    "il8",
+    "il1",
+    "il6",
+    "il10",
+    "tnf",
+    "tgf"
+  ],
+  "mask_channels": [
+    {
+      "name": "mask_e",
+      "type_id": 1
+    },
+    {
+      "name": "mask_ndn",
+      "type_id": 6
+    },
+    {
+      "name": "mask_na",
+      "type_id": 5
+    },
+    {
+      "name": "mask_m1",
+      "type_id": 8
+    },
+    {
+      "name": "mask_m2",
+      "type_id": 9
+    }
+  ],
+  "scaling": {
+    "kind": "kurtosis_adaptive_clip_to_minus1_plus1",
+    "source": "fit_on_train_split",
+    "max": [
+      1.3573252841680972e-08,
+      1.296243890003268e-09,
+      1.2658001757870352e-08,
+      7.68064811751401e-09,
+      4.156335364768893e-08,
+      3.453745840431566e-09
+    ],
+    "clip_percentile": [
+      99.0,
+      98.0,
+      99.0,
+      -1.0,
+      -1.0,
+      98.5
+    ],
+    "excess_kurtosis": [
+      205.11674709822017,
+      684.4334905482887,
+      100.63275716937605,
+      16.47580565076248,
+      13.834366839695235,
+      333.5170128390871
+    ],
+    "noise_floor_frac": 0.0001,
+    "cmax_raw": [
+      1.2990254560918402e-07,
+      3.413655491613099e-08,
+      3.378655577535028e-08,
+      7.68064811751401e-09,
+      4.156335364768893e-08,
+      5.420118043275579e-08
+    ],
+    "scope": "fit on train split (first train_n target windows)",
+    "schedule": "q=98.0(k>=600),98.5(300-600),99.0(100-300),99.5(20-100),none(k<20)",
+    "formula_scaled": "x_scaled = 2*min(x,cmax)/cmax - 1",
+    "formula_denorm": "x_phys = (x_scaled + 1)/2 * cmax",
+    "coord_range": "xyz in [-1,1], t in [-1,1]"
+  },
+  "window": {
+    "input_frames": 2,
+    "target_offset": 1,
+    "description": "(t, t+1) -> t+2"
+  }
+}
