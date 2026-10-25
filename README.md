@@ -52,6 +52,7 @@ All ABM results come from one 100-point Latin-hypercube design (`smores/manifest
 | `fig2_architectures.png` | The two benchmarked architectures |
 | `fig3_accuracy.png` | One-step volumetric accuracy and metrics, per seed |
 | `fig4_midplane.png` | Mid-plane reconstruction at t = 88 h and per-plane R² |
+| `fig5_cost.png` | Inference time relative to one ABM trajectory |
 | `fig6_sobol.png` | Sobol total-order indices, ranked |
 | `fig7_smore.png` | SMoRe ParS on the ABM: per-cytokine sensitivity against recovery, and region widths |
 | `fig8_rollout.png` | Autoregressive rollouts, R² per step ahead |
