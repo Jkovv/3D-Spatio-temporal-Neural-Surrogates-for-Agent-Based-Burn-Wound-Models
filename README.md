@@ -10,7 +10,7 @@ All ABM results come from one 100-point Latin-hypercube design (`smores/manifest
 | | |
 |---|---|
 | One-step accuracy, dense cytokine (IL-8) | DeepONet R² = 1.000, 3D U-Net 0.996, against the training target, which is clipped at the 99th percentile of IL-8 |
-| One-step accuracy, sparse cytokine (IL-10, not clipped) | DeepONet 0.903 (0.84-0.94 across seeds) in the early and 0.51 (-0.31-0.95) in the late test window; U-Net 0.721 (0.67-0.81) and 0.607. The IL-10 failures are a nearly uniform offset on the 97% of voxels that are empty, not errors at the peaks (R² over the active voxels 0.88-0.99 in every frame). With a trunk width of 256 instead of the tuned 128, the two weak DeepONet seeds reach 0.96 / 0.94-0.95 (`models/control_hidden256/`) |
+| One-step accuracy, sparse cytokine (IL-10, not clipped) | DeepONet 0.903 (0.84-0.94 across seeds) in the early and 0.51 (-0.31-0.95) in the late test window; U-Net 0.721 (0.67-0.81) and 0.607 |
 | Trivial baselines | Repeating the previous frame scores higher than both networks: R² = 0.9999 on IL-8 and 0.967 / 0.958 on IL-10 (early / late window); linear extrapolation reaches 0.934 / 0.918 on IL-10. In this teacher-forced one-step setting the field metrics mostly reflect how slowly the fields change between hours |
 | Clipping | Scored against the full IL-8 field, networks trained on the clipped field reach R² = 0.71, the ceiling for any predictor of the clipped field (the voxels above the clip value are 1.7% of the field and carry 29% of its variance). Trained without clipping, the U-Net reaches 0.95 and DeepONet 0.52-0.85, still below persistence (`models/clip_comparison/`) |
 | Autoregressive rollouts | From t = 82 h, with the network's own channel fed back, no network is stable across seeds: on IL-8 one DeepONet seed collapses (late R² -0.01) while the U-Net holds 0.93-0.96; on IL-10 one DeepONet seed beats persistence and two collapse (`models/rollout_3d/`) |
@@ -33,7 +33,6 @@ All ABM results come from one 100-point Latin-hypercube design (`smores/manifest
 │   ├── deeponet_3d/, unet_3d/        # benchmark: clipped protocol, IL-8 and IL-10, seeds 1/42/100
 │   ├── clip_comparison/              # the same networks trained without clipping, scored against the full field
 │   ├── rollout_3d/                   # autoregressive rollouts
-│   ├── control_hidden256/            # DeepONet IL-10, seeds 1 and 100, trunk width 256 (scripts/run_control_hidden256.slurm)
 │   └── persistence_baseline_run_0062_50.json, forward_numbers.json
 ├── scripts/     # preprocessing, training, evaluation, figures; scripts/v2/ is the chain that produced the field results
 ├── figures/     # the manuscript figures (PNG)
