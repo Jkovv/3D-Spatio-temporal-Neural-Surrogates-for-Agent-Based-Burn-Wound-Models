@@ -32,6 +32,7 @@ python scripts/figures.py --models-root models --prep-root preprocessed_3d --swe
 python scripts/fig_seeddots.py
 python scripts/assemble_panels.py --in figures_3d --out figures
 cp figures_3d/F6_rollout.png figures/fig8_rollout.png
+if [ -n "${SKIP_STATS:-}" ]; then echo "DONE (figures only)"; exit 0; fi
 # field statistics of the sweep for the data appendix (conda python, without the TensorFlow module environment)
 module purge
 unset PYTHONPATH

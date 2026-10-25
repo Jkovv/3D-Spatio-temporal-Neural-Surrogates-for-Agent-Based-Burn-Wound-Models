@@ -282,7 +282,7 @@ def figB3():
     ax.set_ylim(top=max(v + e for v, e in zip(vals, errs)) * 4)
     ax.set_ylabel("ABM time / inference time")
     for xi, v, e in zip(x, vals, errs):
-        elbl = f"\\,$\\pm$\\,{e:.0f}"      # always show, even if 0
+        elbl = f"$\,\pm\,{e:.0f}$"      # always show, even if 0
         ax.text(xi, (v + e) * 1.25, f"{v:.0f}$\\times${elbl}", ha="center",
                 fontsize=6.5, fontweight="bold")
     fig.tight_layout()
