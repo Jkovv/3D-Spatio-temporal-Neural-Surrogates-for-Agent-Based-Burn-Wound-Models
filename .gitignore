@@ -47,3 +47,8 @@ smores/results/smore_pars_strict5.json.fits.json
 smores/results/smore_pars_strict_nsd1.json.fits.json
 smores/external_data/
 smores/external_data/
+
+# staging of the v2 chain (collect.sh copies what the paper uses)
+models/v2/
+smores/results/v2/
+smores/results_v3/v2/
