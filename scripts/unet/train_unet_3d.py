@@ -50,8 +50,8 @@ def configure_gpu(use_mixed_precision=True):
 
 configure_gpu()
 
-N_TRIALS    = 20
-TUNE_EPOCHS = 20
+N_TRIALS    = 40
+TUNE_EPOCHS = 40
 FULL_EPOCHS = 200
 
 
@@ -338,6 +338,7 @@ def run_pipeline(grid, seed, cytokine, run_name,
         "grid": grid, "seed": seed, "cytokine": cytokine, "run": run_name,
         "best_params": best,
         "optuna_best_val_loss": optuna_val,
+        "optuna_budget": {"n_trials": N_TRIALS, "tune_epochs": TUNE_EPOCHS},
         "train_time_seconds": round(train_elapsed, 2),
         "pred_time_seconds": round(pred_elapsed,  2),
         "results": {

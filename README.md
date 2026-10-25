@@ -2,7 +2,7 @@
 
 Code and results for *Forward fidelity does not guarantee parameter recoverability in a three-dimensional agent-based burn-wound model*: volumetric neural field surrogates for a three-dimensional agent-based model (ABM) of the post-burn immune response, a global sensitivity analysis of the ABM, and parameter inference with SMoRe ParS, including a test of whether surrogate predictions can serve as data for that inference and an external stress test on measured *E. coli* growth curves.
 
-All ABM results come from one 100-point Latin-hypercube design (`smores/manifest.json`). The analyses that work on volume-averaged trajectories (Sobol, SMoRe ParS, the ridge analysis) use six stochastic realisations of every point, stored as trajectories in `smores/results/replicates.npz`. The analyses that need the full cytokine fields (surrogate training, rollouts, the clipping comparison, surrogate predictions as data) use one realisation of the same 100 points, simulated in one batch (`scripts/v2/run_all.sh`); the ABM has no fixed RNG seed, so this is a separate draw. Between realisations volume-averaged IL-8 differs by less than 0.1%, the other cytokines by 10-30%. Surrogate hyperparameters were tuned with Optuna on seed 42 and reused for seeds 1 and 100. All Gaussian-process fits and the region search use fixed random seeds.
+All ABM results come from one 100-point Latin-hypercube design (`smores/manifest.json`). The analyses that work on volume-averaged trajectories (Sobol, SMoRe ParS, the ridge analysis) use six stochastic realisations of every point, stored as trajectories in `smores/results/replicates.npz`. The analyses that need the full cytokine fields (surrogate training, rollouts, the clipping comparison, surrogate predictions as data) use one realisation of the same 100 points, simulated in one batch (`scripts/v2/run_all.sh`); the ABM has no fixed RNG seed, so this is a separate draw. Between realisations volume-averaged IL-8 differs by less than 0.1%, the other cytokines by 10-30%. Surrogate hyperparameters were tuned with Optuna (40 trials; 60 tuning epochs for DeepONet, 40 for the U-Net) on seed 42 and reused for seeds 1 and 100. All Gaussian-process fits and the region search use fixed random seeds.
 
 ---
 ## Headline results
@@ -43,7 +43,7 @@ All ABM results come from one 100-point Latin-hypercube design (`smores/manifest
 
 **`scripts/`** holds the preprocessing from the 2D benchmark (kurtosis-adaptive percentile clipping, two-frame look-back, chronological 70/10/19 split), adapted to 3D by removing a numerical-diffusion noise floor and computing the kurtosis and clip percentile over the voxels above it (`preprocessing/preprocess_3d.py`; `--no-clip` keeps a linear scale). Of the two benchmark cytokines only IL-8 is clipped (99th percentile); IL-10 has an excess kurtosis below 20 and is not. Training scripts: `deeponet/train_deeponet_3d.py`, `unet/train_unet_3d.py` (metrics: global R², masked RMSE, Dice, volumetric SSIM, Fisher-z-pooled spatial correlation, mid-plane R²). Evaluation: `persistence_baseline.py` (persistence and linear extrapolation with the same metric code), `rollout_3d.py` and `rollout_summary.py` (autoregressive rollouts, table and figure), `clip_comparison.py` and `clip_ceiling.py` (clipped vs unclipped normalisation against the full field), `forward_numbers.py` (the numbers of the forward tables from the result files), `diag_late_window.py` (per-frame R² over active and empty voxels, background offset and sign of the predictions; `run_diag.slurm`). Figures: `figures.py`, `fig_seeddots.py`, `assemble_panels.py`.
 
-**`scripts/v2/`** is the chain that produced every field-based result, submitted as one set of dependent Slurm jobs by `run_all.sh`: the 100 ABM runs, preprocessing of the benchmark run and of every sweep point on its frozen scale (clipped and unclipped), training of both networks on both normalisations, DeepONet predictions at every sweep point, the surrogate-in-the-loop inference, and the evaluation (`eval.slurm`); `figures.slurm` rebuilds the figures and the field statistics afterwards.
+**`scripts/v2/`** is the chain that produced every field-based result, submitted as one set of dependent Slurm jobs by `run_all.sh`: the 100 ABM runs, preprocessing of the benchmark run and of every sweep point on its frozen scale (clipped and unclipped), training of both networks on both normalisations, DeepONet predictions at every sweep point, the surrogate-in-the-loop inference, and the evaluation (`eval.slurm`). `run_from_training.sh` repeats the chain from the training step on the existing fields, `collect.sh` copies the results into the directories below and rebuilds the tables, and `figures.slurm` rebuilds the figures and the field statistics.
 
 **`figures/`**: one PNG per manuscript figure. File numbers follow the order in which the figures were made, not their numbering in the paper.
 
@@ -69,7 +69,9 @@ The cluster drivers contain the Snellius paths of the authors' environment; adju
 ```bash
 # field-based results: ABM runs, preprocessing, training, predictions, loop, evaluation (one dependent chain)
 bash scripts/v2/run_all.sh
-sbatch scripts/v2/figures.slurm           # afterwards: figures, panels, field statistics
+bash scripts/v2/run_from_training.sh      # or: retune and retrain the networks on the existing fields
+bash scripts/v2/collect.sh                # afterwards: result files into models/ and smores/, tables
+sbatch scripts/v2/figures.slurm           # figures, panels, field statistics
 
 # volume-average-based results (replicate trajectories in smores/results/replicates.npz)
 cd smores
