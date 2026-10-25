@@ -17,4 +17,4 @@ for S in clip noclip; do
     $PY preprocessing/preprocess_3d.py --sim-root $WORK/outputs --out-root $WORK/infer_$S --grid 50 --runs $RUN \
         --scale-from $WORK/prep_$S/run_0062/50x50x50/metadata.json
 done
-echo "=== DONE $RUN ==="
+echo "DONE $RUN"

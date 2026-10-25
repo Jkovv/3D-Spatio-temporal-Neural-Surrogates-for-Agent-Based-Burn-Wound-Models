@@ -13,10 +13,9 @@ smores/
 ├── helpers/                    # supporting analyses (surrogate-model selection, ridge, benchmark run, ...)
 ├── smore/                      # shared modules (observables, Sobol emulator) and the script that writes the loop's surrogate trajectories
 ├── external_data/              # place the supplementary spreadsheets of Gong & Ying (2026) here; not included
-├── results/                    # inputs (replicate trajectories, Sobol indices, ridge analysis, SM selection, loop trajectories)
-│                               # and the results of the previous run of the pipeline
-├── results_v3/                 # results used in the manuscript, and the generated tables (results_v3/tables/)
-└── sweep/outputs/run_0001 … run_0100/   # ABM output: params.json, datafiles/, LatticeData/{Cyto,Cell}Step_*.npz
+├── results/                    # inputs: replicate trajectories, Sobol indices, ridge analysis, SM selection, design check,
+│                               # and the volume-averaged DeepONet and ABM trajectories used by the loop
+└── results_v3/                 # results used in the manuscript, and the generated tables (results_v3/tables/)
 ```
 
 `manifest.json` carries `param_names`, `bounds` (per parameter `low`/`high` plus a description), `baselines`, and the per-run vectors under `runs`. `params.json` in each run directory nests the vector under a `params` key and is the pairing key between θ and trajectory.
@@ -37,7 +36,7 @@ Per-run-directory staging, matching the original sweep's structure and safer tha
 
 ### Sampling and replicates
 
-Latin hypercube via `scipy.stats.qmc.LatinHypercube` (`setup_runs.py`), deterministic under a fixed seed and independent of SALib. Every range spans ±30% around the baseline value of the inherited model; the four initial cell counts are rounded to the nearest integer, so the two end values of each count receive half the probability of an interior value. The ABM is stochastic, so every sweep point was simulated five more times (`manifest_replicates.json`), giving six realisations per point. `smore_strict/collect_replicates.py` averages each cytokine field over the whole $50^3$ domain at each of the 101 hourly frames, as written by the ABM (no noise floor, no clipping), and stores the trajectories of all realisations in `results/replicates.npz`:
+Latin hypercube via `scipy.stats.qmc.LatinHypercube` (`setup_runs.py`), deterministic under a fixed seed and independent of SALib. Every range spans ±30% around the baseline value of the inherited model; the four initial cell counts are rounded to the nearest integer, so the two end values of each count receive half the probability of an interior value. The ABM is stochastic, so every sweep point was simulated five more times (`manifest_replicates.json`), giving six realisations per point for the volume-averaged analyses. The cytokine fields used by the surrogates come from a separate realisation of the same 100 points (`../scripts/v2/run_all.sh`); the fields are kept outside the repository. `smore_strict/collect_replicates.py` averages each cytokine field over the whole $50^3$ domain at each of the 101 hourly frames, as written by the ABM (no noise floor, no clipping), and stores the trajectories of all realisations in `results/replicates.npz`:
 
 ```bash
 python smore_strict/collect_replicates.py --sweep sweep/outputs --replicates <replicate-output-dir> \
@@ -55,16 +54,17 @@ python smore_strict/collect_replicates.py --sweep sweep/outputs --replicates <re
 | `sobol_per_cytokine.py` | The indices per cytokine, as in the manuscript table |
 | `../helpers/sm_selection.py` | Choice of the surrogate model (SM) per cytokine by AIC among three ODE candidates |
 | `smore_pars_strict.py` | SMoRe ParS: SM fits with profile-likelihood bounds, Gaussian-process bound surfaces, leave-one-out admissible regions; `--thin k` fits every k-th frame |
-| `loop_strict.py` | Surrogate predictions as data: five ways of forming the data interval from the DeepONet's IL-8 trajectories, and a matched-error control |
+| `loop_strict.py` | Surrogate predictions as data: five ways of forming the data interval from the DeepONet's IL-8 trajectories, and a matched-error control; run for the clipped and the unclipped surrogate (`results_v3/loop_seed*.json`, `loop_noclip_seed*.json`) |
+| `design_check.py` | Correlations in the Latin-hypercube design, range of the `init_ec` × `keil8` product, log-linear regression of IL-8 on both parameters |
 | `ecoli_strict.py` | The same workflow on the *E. coli* growth curves, with a positive control (`--drop-genome` leaves out one strain) and genome classification |
 | `make_tables.py` | All manuscript tables of this part, and `numbers.txt`: every number quoted in the text with its source |
-| `run_v3_main.slurm`, `run_v3_ecoli.slurm` | Cluster drivers of the manuscript version; adjust `BASE` and `PY` at the top |
-| `run_v2_loop.slurm` | Driver of the loop, whose results are unchanged and copied into `results_v3/` |
+| `run_v3_main.slurm`, `run_v3_learning_curve.slurm`, `run_v3_ecoli.slurm` | Cluster drivers of the manuscript version; adjust `BASE` and `PY` at the top. The loop is driven from `../scripts/v2/` together with the surrogate predictions |
 
 ```bash
-sbatch smore_strict/run_v2_loop.slurm    # surrogate predictions as data, training seeds 1, 42, 100
-sbatch smore_strict/run_v3_main.slurm    # main, every 5th frame, quadrature, top five, one SD
-sbatch smore_strict/run_v3_ecoli.slurm   # real curves, positive control (five and four strains), continuous box, quadrature
+sbatch smore_strict/run_v3_main.slurm            # main, every 5th frame, quadrature, top five, one SD
+sbatch smore_strict/run_v3_learning_curve.slurm  # the same inference on nested subsamples of 60-90 points
+sbatch smore_strict/run_v3_ecoli.slurm           # real curves, positive control (five and four strains), continuous box, quadrature
+python smore_strict/design_check.py --manifest manifest.json --replicates-npz results/replicates.npz --out results/design_check.json
 python smore_strict/make_tables.py --results results_v3 --sobol results/sobol_repmean.json --ecoli-npz results_v3/ecoli_arrays.npz
 ```
 
@@ -90,7 +90,7 @@ Each driver can first be run on a few folds as a check: `sbatch --export=ALL,FOL
 
 **External data.** 5 strains × 29 media × 6 replicate growth curves (Gong & Ying 2026). The readings of the 4.63 Mb strain end at 24 h, those of the other strains at 48.5 h. The media vary one component at a time, and K⁺/PO₄³⁻ and NH₄⁺/SO₄²⁻ vary together because they come from the same salts. The region is therefore evaluated on the 145 conditions of the design rather than on a continuous box, which consists mostly of media that do not exist; the genome is also classified by the genome with the most admissible conditions. The positive control keeps the design, the replicate residuals and the missing readings, and generates curves in which genome size sets the plateau, K⁺ the rate and NH₄⁺ the midpoint, each over the 5-95% range of the real fits. With all five strains the plateau of the 4.63 Mb strain is not identified within its window, so the control is also run without that strain.
 
-**Endothelium is frozen.** `init_ec` affects IL-8 only through the number of constitutive sources, and the IL-8 equation is linear with fixed sources, so volume-averaged IL-8 depends on `init_ec` × `keil8`. Over the 100 simulated points the replicate-mean final IL-8 is linear in the product with 1 - R² = 1.9e-9 and correlates with each factor at 0.70 and 0.69; a GP emulator gives the same picture (`results/ridge_init_ec_keil8_repmean_*.json`). The small deviation from an exact product comes from the neutrophil terms, so this is a practical product non-identifiability under the volume-averaged observable. On fields clipped at the surrogate's training scale the dependence on the product breaks, and the two parameters become separately recoverable; this separability is induced by preprocessing.
+**Endothelium is frozen.** `init_ec` affects IL-8 only through the number of constitutive sources, and the IL-8 equation is linear with fixed sources, so volume-averaged IL-8 depends on `init_ec` × `keil8`. Over the 100 simulated points the replicate-mean final IL-8 is linear in the product with 1 - R² = 1.9e-9 and correlates with each factor at 0.70 and 0.69; a GP emulator gives the same picture (`results/ridge_init_ec_keil8_repmean_*.json`). The small deviation from an exact product comes from the neutrophil terms, so this is a practical product non-identifiability under the volume-averaged observable. On fields clipped at the surrogate's training scale the dependence on the product breaks, and the two parameters become separately recoverable (`results_v3/tables/tab_loop.tex`, ABM rows against the unclipped row from `smore_il8_unclipped.json`); this separability is induced by preprocessing.
 
 ---
 
@@ -104,7 +104,9 @@ Each driver can first be run on a few folds as a check: `sbatch --export=ALL,FOL
 | Containment | Marginal containment 0.94-0.98 (`init_f` 0.83); true vector admissible in 84% of folds, held-out bounds within the 2 SD band in a median of 92% |
 | Integer cell counts | The region is sampled as a continuous relaxation of the four integer counts. Rounded to integer counts (from the per-fold region quantiles stored in `results_v3/smore_main.json`), the containment of `init_f` rises from 0.83 to 1.00 (its true value is on a range end in 16 folds) and that of the other counts changes by at most 0.02; the region medians do not change |
 | Error model | Every 5th frame: true vector admissible in 97% of folds, region 2.4 times larger, secretion-rate R² 0.59-0.67. SM misfit in quadrature: 99%, region 3.3 times larger. Top five: same ordering and ridge. One SD: 35% (only containment reported) |
-| Surrogate predictions as data | Trajectory R² 0.93-0.98; error at unseen points 3.7-5.6% against 0.8-0.9% on the training run's validation frames. Without allowance the true vector is admissible at ≤ 4% of points; with the error propagated in SM space at 98-100%, but the region covers 50-77% of the box instead of 2%, and `keil8` R² falls from 0.87 to 0.13-0.28. The matched-error control loses almost as much |
+| SMoRe ParS on 60-90 points | Region medians, widths and the ridge unchanged (largest change in R² 0.07; widths 0.057-0.058 along the sum and 0.95-0.97 along the difference of `init_ec` and `keil8`); true vector admissible in 75-84% |
+| Bound surfaces | Surfaces that depend on the ABM parameters (amplitudes, production rates) have leave-one-out R² 0.86-1.00; the kinetic ones are flat (R² ≈ 0) but 83-93% of held-out bounds lie within the 2 SD band |
+| Surrogate predictions as data | Trajectory R² 0.96-0.99; error at unseen points 2.5-4.1% against 0.4-0.8% on the training run's validation frames. Without allowance the true vector is admissible at ≤ 1% of points; with the error propagated in SM space at 99-100%, but the region covers 24-73% of the box instead of 2%, and `keil8` R² falls from 0.89 to 0.09-0.39. The matched-error control loses almost as much. The surrogate trained without clipping has an out-of-sample error of 27-147% and gives no usable data |
 | *E. coli*, real curves | Logistic SM median R² 0.983 on 126 growing conditions; median 13 of 145 conditions admissible per curve; genome R² 0.69, true genome among the admissible conditions for 92% of curves, most-admissible genome correct for 60% (chance 20%); true condition admissible in 81% (92% with misfit). On the continuous box the region covers 96.5% of it |
 | *E. coli*, positive control | Five strains: rate and midpoint inputs recovered (R² 0.66, 0.76); genome median R² 0.00 but most-admissible genome correct for 75%. Four strains (4.63 Mb strain left out): genome identified in every fold (R² 1.00), rate and midpoint inputs 0.94 and 1.00, inactive inputs unconstrained, true condition admissible in 100% |
 

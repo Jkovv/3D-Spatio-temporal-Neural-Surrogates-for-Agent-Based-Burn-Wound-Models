@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-# ---- paths ----------------------------------------------------------------
+# paths
 SCRATCH=/gpfs/scratch1/shared/jkowalczuk
 CONDA_ROOT=$SCRATCH/miniconda3
 ENV_NAME=cc3d
@@ -21,7 +21,7 @@ ENV_NAME=cc3d
 echo "[install] host=$(hostname)  date=$(date)"
 echo "[install] scratch=$SCRATCH"
 
-# 1. miniconda (skip if already present) ------------------------------------
+# 1. miniconda (skip if already present)
 if [ ! -d "$CONDA_ROOT" ]; then
     echo "[install] downloading miniconda..."
     cd "$SCRATCH"
@@ -35,7 +35,7 @@ fi
 
 source "$CONDA_ROOT/bin/activate"
 
-# 2. CC3D env (headless: cc3d only, no cc3d-player5) -------------------------
+# 2. CC3D env (headless: cc3d only, no cc3d-player5)
 if conda env list | grep -q "^$ENV_NAME "; then
     echo "[install] env '$ENV_NAME' exists; reusing. Delete it to rebuild:"
     echo "          conda env remove -n $ENV_NAME"
@@ -47,11 +47,11 @@ fi
 
 conda activate "$ENV_NAME"
 
-# 3. FiPy + calibration deps (pip) ------------------------------------------
+# 3. FiPy + calibration deps (pip)
 echo "[install] installing FiPy + calibration packages..."
 pip install --no-input "numpy<2" fipy scipy scikit-learn SALib   # cc3d is built against NumPy 1
 
-# 4. smoke test --------------------------------------------------------------
+# 4. smoke test
 echo "[install] smoke test..."
 python - <<'PYEOF'
 import importlib, sys

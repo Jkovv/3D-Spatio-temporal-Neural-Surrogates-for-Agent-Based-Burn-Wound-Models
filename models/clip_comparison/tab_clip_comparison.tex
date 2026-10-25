@@ -1,5 +1,5 @@
 \begin{table}[!htbp]
-\caption{Clipped vs unclipped normalisation on a second realisation of the benchmark point (run~0062, same parameters). Each network is trained and tuned (same Optuna search space) on its own normalisation, and every row is scored against the same unclipped ground truth: global $R^2$ one step ahead (teacher forcing) and in an autoregressive rollout from $t=82$\,h, in the early ($t=82$-91\,h) and late ($t=92$-100\,h) windows. Networks: mean over seeds 1, 42 and 100, range in brackets.}
+\caption{Clipped vs unclipped normalisation on a second realisation of the benchmark point (run~0062, same parameters). Each network is trained and tuned (same Optuna search space) on its own normalisation, and every row is scored against the same unclipped ground truth: global $R^2$ one step ahead (teacher forcing) and in an autoregressive rollout from $t=82$\,h, in the early ($t=82$-91\,h) and late ($t=92$-100\,h) windows. Networks: median over seeds 1, 42 and 100, range in brackets. Clipped field itself: the clipped target scored against the full field, the highest $R^2$ any predictor of the clipped field can reach.}
 \label{tab:clip_comparison}
 \centering\footnotesize
 \begin{tabular}{lcccc}
@@ -9,12 +9,13 @@
 \textbf{Predictor} & \textbf{early} & \textbf{late} & \textbf{early} & \textbf{late} \\
 \midrule
 \multicolumn{5}{l}{\textit{IL-8} (clip at q = 99.0; 1.7\% of active test voxels above it)} \\
+Clipped field itself (upper bound) & $0.707$ & $0.711$ & -- & -- \\
 Persistence & $1.000$ & $1.000$ & $0.998$ & $0.989$ \\
 Linear extrapolation & $1.000$ & $1.000$ & -- & -- \\
-DeepONet, clipped & $0.702$ (0.702-0.702) & $0.707$ (0.705-0.708) & $0.699$ (0.695-0.701) & $0.676$ (0.637-0.699) \\
-DeepONet, unclipped & $0.943$ (0.921-0.975) & $0.852$ (0.741-0.941) & $-0.054$ (-0.668-0.679) & $<-10$ (<-10-<-10) \\
-U-Net, clipped & $0.703$ (0.701-0.705) & $0.707$ (0.704-0.710) & $0.694$ (0.686-0.699) & $0.649$ (0.639-0.655) \\
-U-Net, unclipped & $0.959$ (0.953-0.963) & $0.954$ (0.948-0.960) & $0.763$ (0.536-0.877) & $<-10$ (<-10-0.053) \\
+DeepONet, clipped & $0.705$ [$0.705$, $0.706$] & $0.706$ [$0.706$, $0.712$] & $0.706$ [$0.702$, $0.707$] & $0.620$ [$0.321$, $0.696$] \\
+DeepONet, unclipped & $0.778$ [$0.518$, $0.847$] & $0.454$ [$-1.127$, $0.824$] & $0.488$ [$<-10$, $0.581$] & $-0.093$ [$<-10$, $0.187$] \\
+U-Net, clipped & $0.709$ [$0.709$, $0.710$] & $0.713$ [$0.712$, $0.714$] & $0.706$ [$0.703$, $0.708$] & $0.689$ [$0.682$, $0.695$] \\
+U-Net, unclipped & $0.948$ [$0.945$, $0.953$] & $0.942$ [$0.938$, $0.949$] & $0.825$ [$0.743$, $0.891$] & $-2.999$ [$<-10$, $-1.135$] \\
 \bottomrule
 \end{tabular}
 \end{table}

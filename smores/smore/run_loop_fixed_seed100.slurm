@@ -21,4 +21,4 @@ python run_calibration_surrogate.py \
     --cytokines il8 \
     --params keil8 init_ec sigmoidb init_m km1il6 \
     --out /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models/smores/results/calibration_surrogate_il8_seed100.json
-echo "=== DONE seed 100 ==="
+echo "DONE seed 100"

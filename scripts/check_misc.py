@@ -9,13 +9,13 @@ for d in sorted(glob.glob(os.path.join(B, "sweep/outputs/run_*"))):
     for c in cyts:
         a = z[c]
         mins[c].append(float(a.min())); zeros[c].append(int((a == 0).sum()))
-print("=== raw fields, t = 100 h ===")
+print("raw fields, t = 100 h")
 for c in cyts:
     print(f"{c:5s} min(minimum over runs)={min(mins[c]):.3e}  max(minimum)={max(mins[c]):.3e}  "
           f"runs with min==0: {sum(m == 0 for m in mins[c])}/100  "
           f"mean exact zeros: {np.mean(zeros[c]):.1f} voxels")
 
-print("\n=== loop ===")
+print("\nloop")
 R = os.path.join(B, "smores/results")
 for f in ["calibration_surrogate_il8.json", "calibration_surrogate_il8_seed1.json",
           "calibration_surrogate_il8_seed100.json"]:

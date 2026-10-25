@@ -20,4 +20,4 @@ python run_calibration_surrogate.py \
     --model deeponet --run-tag run_0062 --seed 1 --grid 50 \
     --cytokines il8 \
     --out /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models/smores/results/calibration_surrogate_il8_seed1.json
-echo "=== DONE seed 1 ==="
+echo "DONE seed 1"

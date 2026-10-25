@@ -17,7 +17,7 @@ cd $SM
 P="--replicates-npz $SM/results/replicates.npz --manifest $SM/manifest.json --procs $SLURM_CPUS_PER_TASK --sigma-mode paper --n-sd 2"
 for n in 60 70 80 90; do
   cp -n $OUT/smore_main.json.fits.json $OUT/smore_main_n${n}.json.fits.json
-  echo "=== $n sweep points ==="
+  echo "$n sweep points"
   $PY smore_strict/smore_pars_strict.py $P --subsample $n --out $OUT/smore_main_n${n}.json
 done
-echo "=== DONE ==="
+echo "DONE"

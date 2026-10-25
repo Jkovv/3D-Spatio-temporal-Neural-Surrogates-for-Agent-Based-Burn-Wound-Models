@@ -24,9 +24,9 @@ mkdir -p $OUT
 cd $BASE/scripts
 for CYT in $CYTS; do
     for SEED in 42 1 100; do
-        echo "=== $MODEL $SCALE $CYT seed $SEED ==="
+        echo "$MODEL $SCALE $CYT seed $SEED"
         python $MODEL/train_${MODEL}_3d.py --cytokine $CYT --seed $SEED --run run_0062 --grid 50 \
             --data $WORK/prep_$SCALE --out $OUT
     done
 done
-echo "=== DONE ==="
+echo "DONE"

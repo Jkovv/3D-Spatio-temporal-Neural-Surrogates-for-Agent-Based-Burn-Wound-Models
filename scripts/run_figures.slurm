@@ -14,8 +14,8 @@ module load 2023
 module load TensorFlow/2.15.1-foss-2023a-CUDA-12.1.1
 python -c "import matplotlib, skimage" 2>/dev/null || pip install --user --no-input matplotlib scikit-image
 cd /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models
-echo "=== [1/2] figures.py ==="
+echo "[1/2] figures.py"
 python scripts/figures.py --models-root models --prep-root preprocessed_3d --sweep-root smores/results --grid 50 --out figures_3d
-echo "=== [2/2] assemble_panels.py ==="
+echo "[2/2] assemble_panels.py"
 python scripts/assemble_panels.py --in figures_3d --out figures
-echo "=== DONE ALL ==="
+echo "DONE ALL"

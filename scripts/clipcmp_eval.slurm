@@ -18,4 +18,4 @@ module load TensorFlow/2.15.1-foss-2023a-CUDA-12.1.1
 cd $BASE
 python scripts/clip_comparison.py --work /gpfs/scratch1/shared/jkowalczuk/clipcmp \
     --models $BASE/models/clip_comparison --cytokines $CYTS
-echo "=== DONE ==="
+echo "DONE"

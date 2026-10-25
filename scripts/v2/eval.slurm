@@ -28,4 +28,4 @@ ln -sfn $WORK/prep_clip $WORK/pb/preprocessed_3d
 cd $WORK/pb
 python $BASE/scripts/persistence_baseline.py
 cp models/persistence_baseline_run_0062_50.json $BASE/models/v2/
-echo "=== DONE ==="
+echo "DONE"

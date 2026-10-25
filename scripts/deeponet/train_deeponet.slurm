@@ -17,7 +17,7 @@ CYTOKINE="${1:-il8}"          # first arg: cytokine (default il8)
 RUN="run_0062"                # benchmark run (see helpers/benchmark_run_justification.txt)
 GRID=50
 
-# ---- paths ----------------------------------------------------------------
+# paths
 BASE=/gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models
 SWEEP_OUT=$BASE/sweep/outputs
 PREP=$BASE/preprocessed_3d
@@ -49,7 +49,7 @@ pip install --user --no-input optuna scikit-image 2>&1 | tail -2 || true
 
 cd "$SCRIPTS"
 
-# ---- preprocess the benchmark run (skipped if done) ----------------------
+# preprocess the benchmark run (skipped if done)
 if [ ! -f "$PREP/$RUN/${GRID}x${GRID}x${GRID}/X_branch.npy" ]; then
     echo "[deeponet] preprocessing $RUN ..."
     python preprocessing/preprocess_3d.py \
@@ -61,9 +61,9 @@ else
     echo "[deeponet] preprocessed data for $RUN exists, skipping."
 fi
 
-# ---- seed 42 (Optuna), then 1 and 100 ------------------------------------
+# seed 42 (Optuna), then 1 and 100
 for SEED in 42 1 100; do
-    echo "[deeponet] === training $CYTOKINE seed=$SEED ==="
+    echo "[deeponet] training $CYTOKINE seed=$SEED"
     python deeponet/train_deeponet_3d.py \
         --cytokine "$CYTOKINE" \
         --seed "$SEED" \

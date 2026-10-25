@@ -202,9 +202,10 @@ if var:
                 note(f"variant {n} {p}: R2 region / containment / width", f"{q['r2_median_accepted']:+.3f} / {q['coverage95']:.2f} / {q['sd_ratio']:.2f}", f"{n} jain.per_param")
 
 # surrogate in the loop
-loops = [(s, load(f"loop_seed{s}.json")) for s in (1, 42, 100)]
-loops = [(s, d) for s, d in loops if d]
-if loops:
+def loop_table(prefix, name, label, scale_words, unclipped_row):
+    loops = [(s, load(f"{prefix}{s}.json")) for s in (1, 42, 100)]
+    loops = [(s, d) for s, d in loops if d]
+    if not loops: return
     ARMS = [("abm", "ABM output"), ("sur", "Surrogate, no allowance"), ("sur_val", "Surrogate, validation tolerance"),
             ("sur_cv", "Surrogate, per-frame tolerance"), ("sur_conf", "Surrogate, error propagated in SM space"),
             ("abm_err_conf", "Control: ABM + transplanted error")]
@@ -231,7 +232,7 @@ if loops:
             if J: note(f"loop seed {s} {arm}: non-empty / true vector admissible / volume fraction median / R2 keil8 / R2 init_ec",
                        f"{J['n_nonempty']}/{J['n_folds']} / {J['truth_admissible_all_folds']:.2f} / {J['volume_fraction']['median']:.3f} / "
                        f"{J['per_param']['keil8']['r2_median_accepted']:+.3f} / {J['per_param']['init_ec']['r2_median_accepted']:+.3f}", f"loop_seed{s}.json arms.{arm}")
-    uncl = load("smore_il8_unclipped.json")
+    uncl = load("smore_il8_unclipped.json") if unclipped_row else None
     if uncl:
         U = uncl["jain"]; rg = U.get("ridge", {})
         rows.append(f"ABM output, unclipped scale & {100*U['n_nonempty']/U['n_folds']:.0f} & {100*U['truth_admissible_all_folds']:.0f} & "
@@ -246,9 +247,9 @@ if loops:
     for s, d in loops:
         note(f"loop seed {s}: surrogate relative RMS error mean / validation-frame error on run_0062 / trajectory R2 mean",
              f"{np.mean(d['surrogate_rel_rms']):.4f} / {d['tolerance']['val_rel_rms'][0]:.4f} / {np.mean(d['surrogate_traj_r2']):.3f}", f"loop_seed{s}.json")
-    write("tab_loop.tex", f"""\\begin{{table}}[!htbp]
-\\caption{{Surrogate in the loop, IL-8 only, leave-one-out over the {loops[0][1]['n_points']} sweep points other than the surrogate's training run; values for the training seeds {' / '.join(str(s) for s, _ in loops)}. The library of bound surfaces always comes from the ABM; only the data interval of the held-out point changes. ABM output, unclipped scale: the same IL-8-only inference on the volume averages without clipping (no surrogate involved; one value). Relative RMS error of the surrogate's volume-averaged trajectory over the sweep: {err}\\%; on the validation frames of its own training run: {val}\\%; trajectory $R^2$: {tr2}. Non-empty: share of points with a non-empty admissible region. Admissible: share of points whose true parameter vector lies in the region. Volume, $R^2$: median share of the parameter box covered by the region, and $R^2$ of the region median, given only for arms in which the true vector lies in the region in at least 90\\% of points.}}
-\\label{{tab:loop}}
+    write(name, f"""\\begin{{table}}[!htbp]
+\\caption{{Surrogate in the loop, IL-8 only, leave-one-out over the {loops[0][1]['n_points']} sweep points other than the surrogate's training run; values for the training seeds {' / '.join(str(s) for s, _ in loops)}. {scale_words} The library of bound surfaces always comes from the ABM; only the data interval of the held-out point changes. ABM output, unclipped scale: the same IL-8-only inference on the volume averages without clipping (no surrogate involved; one value). Relative RMS error of the surrogate's volume-averaged trajectory over the sweep: {err}\\%; on the validation frames of its own training run: {val}\\%; trajectory $R^2$: {tr2}. Non-empty: share of points with a non-empty admissible region. Admissible: share of points whose true parameter vector lies in the region. Volume, $R^2$: median share of the parameter box covered by the region, and $R^2$ of the region median, given only for arms in which the true vector lies in the region in at least 90\\% of points.}}
+\\label{{{label}}}
 \\centering\\footnotesize
 \\setlength{{\\tabcolsep}}{{4pt}}
 \\begin{{tabular}}{{lccccc}}
@@ -260,6 +261,11 @@ if loops:
 \\end{{tabular}}
 \\end{{table}}
 """)
+
+loop_table("loop_seed", "tab_loop.tex", "tab:loop",
+           "ABM and surrogate fields are averaged on the clipped scale of the surrogate's training run.", True)
+loop_table("loop_noclip_seed", "tab_loop_unclipped.tex", "tab:loop_unclipped",
+           "Surrogate trained on the unclipped field; ABM and surrogate fields are averaged on that unclipped scale.", False)
 
 # E. coli
 real, syn, syn4, cont, quad = (load("ecoli_real.json"), load("ecoli_synthetic.json"), load("ecoli_synthetic_4strains.json"),

@@ -15,4 +15,4 @@ module load 2023
 module load TensorFlow/2.15.1-foss-2023a-CUDA-12.1.1
 cd $BASE
 python scripts/rollout_3d.py --data $BASE/preprocessed_3d --models $BASE/models --out $BASE/models/rollout_3d --start 80
-echo "=== DONE ==="
+echo "DONE"

@@ -13,4 +13,4 @@ export PYTHONUNBUFFERED=1
 export MPLBACKEND=Agg
 cd /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models
 python scripts/check_recon_planes.py
-echo "=== DONE ==="
+echo "DONE"

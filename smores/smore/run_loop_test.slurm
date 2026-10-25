@@ -13,7 +13,7 @@ module load 2023
 module load TensorFlow/2.15.1-foss-2023a-CUDA-12.1.1
 nvidia-smi --query-gpu=name --format=csv,noheader || true
 cd $BASE/smores/smore
-echo "=== TEST loop seed=42 ==="
+echo "TEST loop seed=42"
 python run_calibration_surrogate.py \
     --sim-root $BASE/sweep/outputs \
     --infer-root $BASE/preprocessed_3d_infer \
@@ -22,4 +22,4 @@ python run_calibration_surrogate.py \
     --model deeponet --run-tag run_0062 --seed 42 --grid 50 \
     --cytokines il8 il10 \
     --out $BASE/smores/results/calibration_surrogate_il8_seed42.json
-echo "=== TEST DONE ==="
+echo "TEST DONE"

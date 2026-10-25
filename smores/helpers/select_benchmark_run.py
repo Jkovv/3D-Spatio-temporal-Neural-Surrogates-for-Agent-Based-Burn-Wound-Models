@@ -87,9 +87,7 @@ def main():
         lines.append(s)
         print(s)
 
-    emit("=" * 66)
-    emit("BENCHMARK RUN SELECTION — centrality in LHS parameter space")
-    emit("=" * 66)
+    emit("Benchmark run selection: centrality in LHS parameter space")
     emit(f"manifest source : {source}")
     emit(f"runs            : {len(names)}")
     emit(f"parameters      : {len(pnames)}  ({', '.join(pnames)})")
@@ -98,20 +96,19 @@ def main():
     emit(f"centrality = mean |normalised_param - 0.5|  (0=centre, ~0.5=corner)")
     emit("")
     emit(f"{'rank':>4}  {'run':>10}  {'centrality':>11}  {'#extreme_params':>15}")
-    emit("-" * 48)
     for rank, j in enumerate(order[:args.top], start=1):
-        mark = "  <-- CHOSEN" if j == chosen else ""
+        mark = "  (chosen)" if j == chosen else ""
         emit(f"{rank:>4}  {names[j]:>10}  {centrality[j]:>11.3f}  "
              f"{n_extreme[j]:>15}{mark}")
     emit("")
-    emit(f"CHOSEN BENCHMARK RUN: {names[chosen]}")
+    emit(f"Chosen benchmark run: {names[chosen]}")
     emit(f"  centrality score : {centrality[chosen]:.3f} "
          f"(rank {list(order).index(chosen)+1}/{len(names)})")
     emit(f"  extreme params   : {n_extreme[chosen]}")
     emit("")
     emit(f"  normalised parameter vector (0=sweep min, 1=sweep max):")
     for p, v in zip(pnames, Pn[chosen]):
-        flag = "  <-- extreme" if (v < args.extreme_lo or v > args.extreme_hi) else ""
+        flag = "  (extreme)" if (v < args.extreme_lo or v > args.extreme_hi) else ""
         emit(f"    {p:10s}: {v:.3f}{flag}")
     emit("")
     emit("JUSTIFICATION:")

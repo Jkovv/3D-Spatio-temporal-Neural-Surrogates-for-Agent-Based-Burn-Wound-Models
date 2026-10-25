@@ -19,4 +19,4 @@ for s in ("clip", "noclip"):
     m = json.load(open("$WORK/prep_" + s + "/run_0062/50x50x50/metadata.json"))["scaling"]
     print(s, "clip percentile (il8 il1 il6 il10 tnf tgf):", m["clip_percentile"], "kurtosis:", [round(k, 1) for k in m["excess_kurtosis"]])
 EOF
-echo "=== DONE ==="
+echo "DONE"

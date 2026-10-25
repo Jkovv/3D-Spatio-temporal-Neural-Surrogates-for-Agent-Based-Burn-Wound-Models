@@ -251,7 +251,7 @@ def main():
     json.dump(bundle, open(args.out, "w"), indent=2)
     print(f"\nDONE -> {args.out}")
 
-    print("\n=== DOES THE OBSERVABLE CHOICE MATTER? ===")
+    print("\nDOES THE OBSERVABLE CHOICE MATTER?")
     allp = sorted(set(res_mean["recovery"]["selected_params"])
                   | set(res_spat["recovery"]["selected_params"]))
     print(f"  {'param':10s} {'R2 mean':>9s} {'R2 spatial':>11s} {'delta':>8s}")

@@ -15,4 +15,4 @@ mkdir -p $BASE/smores/results_v3/v2
 cd $BASE/smores
 $PY smore_strict/loop_strict.py --trajectories-npz results/v2/calibration_surrogate_il8_${SCALE}_seed${SEED}_trajectories.npz \
     --manifest manifest.json --procs $SLURM_CPUS_PER_TASK --out results_v3/v2/loop_${SCALE}_seed${SEED}.json
-echo "=== DONE ==="
+echo "DONE"

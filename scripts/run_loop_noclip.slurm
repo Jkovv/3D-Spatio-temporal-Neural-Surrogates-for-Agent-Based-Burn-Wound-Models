@@ -19,14 +19,14 @@ module load TensorFlow/2.15.1-foss-2023a-CUDA-12.1.1
 
 cd $BASE/scripts
 for SEED in 42 1 100; do
-    echo "=== training il8 seed $SEED (unclipped) ==="
+    echo "training il8 seed $SEED (unclipped)"
     python deeponet/train_deeponet_3d.py --cytokine il8 --seed $SEED --run run_0062 --grid 50 \
         --data $BASE/preprocessed_3d_noclip --out $BASE/models/deeponet_3d_noclip
 done
 
 cd $SM/smore
 for SEED in 42 1 100; do
-    echo "=== surrogate predictions at the sweep points, seed $SEED ==="
+    echo "surrogate predictions at the sweep points, seed $SEED"
     python run_calibration_surrogate.py --sim-root $BASE/sweep/outputs --infer-root $BASE/preprocessed_3d_infer_noclip \
         --weights-dir $BASE/models/deeponet_3d_noclip --manifest $SM/manifest.json \
         --model deeponet --run-tag run_0062 --seed $SEED --grid 50 --cytokines il8 \
@@ -35,8 +35,8 @@ done
 
 cd $SM
 for SEED in 42 1 100; do
-    echo "=== loop, seed $SEED ==="
+    echo "loop, seed $SEED"
     $PY smore_strict/loop_strict.py --trajectories-npz $SM/results/calibration_surrogate_il8_noclip_seed${SEED}_trajectories.npz \
         --manifest $SM/manifest.json --procs $SLURM_CPUS_PER_TASK --out $SM/results_v3/loop_noclip_seed${SEED}.json
 done
-echo "=== DONE ==="
+echo "DONE"

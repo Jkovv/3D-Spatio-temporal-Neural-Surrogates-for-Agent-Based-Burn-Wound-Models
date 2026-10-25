@@ -16,7 +16,7 @@ for i in $(seq 1 100); do
     if [ -d "$BASE/preprocessed_3d_infer/$RUN/50x50x50" ]; then
         continue
     fi
-    echo "=== preprocessing $RUN ==="
+    echo "preprocessing $RUN"
     $PY preprocessing/preprocess_3d.py \
         --sim-root $BASE/sweep/outputs \
         --out-root $BASE/preprocessed_3d_infer \
@@ -24,4 +24,4 @@ for i in $(seq 1 100); do
         --runs $RUN \
         --scale-from $SCALE && n_done=$((n_done+1)) || echo "  [FAIL] $RUN"
 done
-echo "=== DONE: preprocessed $n_done runs ==="
+echo "DONE: preprocessed $n_done runs"

@@ -281,7 +281,7 @@ def main():
     print(f"\nDONE -> {args.out}")
 
     if abm is not None:
-        print("\n=== SURROGATE vs ABM (the comparison that matters) ===")
+        print("\nSURROGATE vs ABM (the comparison that matters)")
         s_rank = [r["param"] for r in sur["sobol"]["ranking"]]
         a_rank = [r["param"] for r in abm["sobol"]["ranking"]]
         print(f"  Sobol top-3  surrogate: {s_rank[:3]}")

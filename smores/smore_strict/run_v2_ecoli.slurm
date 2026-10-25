@@ -24,12 +24,12 @@ F=${FOLDS:+--folds $FOLDS}
 P="--procs $SLURM_CPUS_PER_TASK $F --sigma-mode paper --n-sd 2"
 CACHE=$OUT/ecoli_arrays.npz
 if [ ! -f $CACHE ]; then SRC="--curves $CURVES --design $DESIGN --media $MEDIA --save-npz $CACHE"; else SRC="--from-npz $CACHE"; fi
-echo "=== [1/4] real curves, design grid ==="
+echo "[1/4] real curves, design grid"
 $PY smore_strict/ecoli_strict.py $SRC $P --mode real --out $OUT/ecoli_real.json
-echo "=== [2/4] positive control, design grid ==="
+echo "[2/4] positive control, design grid"
 $PY smore_strict/ecoli_strict.py --from-npz $CACHE $P --mode synthetic --out $OUT/ecoli_synthetic.json
-echo "=== [3/4] real curves, continuous box (v1 search space, for comparison) ==="
+echo "[3/4] real curves, continuous box (v1 search space, for comparison)"
 $PY smore_strict/ecoli_strict.py --from-npz $CACHE $P --mode real --continuous --out $OUT/ecoli_real_continuous.json
-echo "=== [4/4] real curves, design grid, sigma 'quadrature' (same robustness check as on the ABM) ==="
+echo "[4/4] real curves, design grid, sigma 'quadrature' (same robustness check as on the ABM)"
 $PY smore_strict/ecoli_strict.py --from-npz $CACHE --procs $SLURM_CPUS_PER_TASK $F --sigma-mode quadrature --n-sd 2 --mode real --out $OUT/ecoli_real_quadrature.json
-echo "=== DONE ==="
+echo "DONE"

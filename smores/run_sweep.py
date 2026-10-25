@@ -77,7 +77,7 @@ def run_local(staged, out_root, cc3d_python):
         out_dir = out_root / rid
         out_dir.mkdir(parents=True, exist_ok=True)
         cmd = cc3d_command(cc3d_python, run_dir, out_dir)
-        print(f"\n[run_sweep] === {rid} ===")
+        print(f"\n[run_sweep] {rid}")
         print(f"[run_sweep] params: {sim_dir/'params.json'}")
         print(f"[run_sweep] cmd: {' '.join(cmd)}")
         try:

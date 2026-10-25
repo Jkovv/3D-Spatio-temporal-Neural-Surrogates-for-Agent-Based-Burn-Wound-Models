@@ -79,7 +79,7 @@ def assemble(name, spec, indir, outdir, labels=True, dpi=300):
         ax.axis("off")
         ax.add_patch(plt.Rectangle((0.01, 0.01), 0.98, 0.98, fill=False,
                      ls="--", ec="0.6", lw=1.2, transform=ax.transAxes))
-        ax.text(0.5, 0.5, "architecture diagram\n(placeholder — hand-drawn)",
+        ax.text(0.5, 0.5, "architecture diagram\n(placeholder ,  hand-drawn)",
                 ha="center", va="center", fontsize=13, color="0.5",
                 style="italic", transform=ax.transAxes)
         outdir.mkdir(parents=True, exist_ok=True)

@@ -12,7 +12,7 @@ BASE=/gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural
 PY=/gpfs/scratch1/shared/jkowalczuk/miniconda3/envs/cc3d/bin/python
 cd $BASE/smores/smore
 
-echo "=== [1/3] topk10 (all 10 params) ==="
+echo "[1/3] topk10 (all 10 params)"
 $PY run_calibration.py \
     --sim-root $BASE/sweep/outputs \
     --manifest $BASE/smores/manifest.json \
@@ -20,7 +20,7 @@ $PY run_calibration.py \
     --n-saltelli 1024 \
     --out $BASE/smores/results/calibration_results_topk10.json
 
-echo "=== [2/3] topk5 by Sobol ==="
+echo "[2/3] topk5 by Sobol"
 $PY run_calibration.py \
     --sim-root $BASE/sweep/outputs \
     --manifest $BASE/smores/manifest.json \
@@ -28,7 +28,7 @@ $PY run_calibration.py \
     --n-saltelli 1024 \
     --out $BASE/smores/results/calibration_results_topk5_sobol.json
 
-echo "=== [3/3] topk5 identifiable ==="
+echo "[3/3] topk5 identifiable"
 $PY run_calibration.py \
     --sim-root $BASE/sweep/outputs \
     --manifest $BASE/smores/manifest.json \
@@ -36,4 +36,4 @@ $PY run_calibration.py \
     --n-saltelli 1024 \
     --out $BASE/smores/results/calibration_results_topk5_identifiable.json
 
-echo "=== DONE ALL 3 ==="
+echo "DONE ALL 3"

@@ -12,14 +12,14 @@ export PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREA
 BASE=/gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models
 PY=/gpfs/scratch1/shared/jkowalczuk/miniconda3/envs/cc3d/bin/python
 SM=$BASE/smores
-OUT=$SM/results${FOLDS:+_test}
+OUT=$SM/results_v3${FOLDS:+_test}
 mkdir -p $OUT; cd $SM
 F=${FOLDS:+--folds $FOLDS}
 for S in 1 42 100; do
   if [ "$S" = "42" ]; then NPZ=$SM/results/calibration_surrogate_il8_trajectories.npz
   else NPZ=$SM/results/calibration_surrogate_il8_seed${S}_trajectories.npz; fi
-  echo "=== loop, surrogate seed $S ==="
+  echo "loop, surrogate seed $S"
   $PY smore_strict/loop_strict.py --trajectories-npz $NPZ --manifest $SM/manifest.json \
       --procs $SLURM_CPUS_PER_TASK $F --out $OUT/loop_seed${S}.json
 done
-echo "=== DONE ==="
+echo "DONE"

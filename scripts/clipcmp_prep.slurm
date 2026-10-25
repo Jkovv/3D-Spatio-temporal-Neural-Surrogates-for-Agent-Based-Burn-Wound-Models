@@ -22,4 +22,4 @@ for s in ("clip", "noclip"):
     print(s, "clip percentile per cytokine (il8 il1 il6 il10 tnf tgf):", m["clip_percentile"])
     print(s, "excess kurtosis:", [round(k, 1) for k in m["excess_kurtosis"]])
 EOF
-echo "=== DONE ==="
+echo "DONE"

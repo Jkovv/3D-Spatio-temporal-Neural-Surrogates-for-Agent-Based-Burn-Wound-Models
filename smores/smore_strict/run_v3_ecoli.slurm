@@ -24,14 +24,14 @@ P="--procs $SLURM_CPUS_PER_TASK $F --sigma-mode paper --n-sd 2"
 CACHE=$OUT/ecoli_arrays.npz
 [ -f $SM/results/ecoli_arrays.npz ] && cp -n $SM/results/ecoli_arrays.npz $CACHE || true
 if [ ! -f $CACHE ]; then SRC="--curves $CURVES --design $DESIGN --media $MEDIA --save-npz $CACHE"; else SRC="--from-npz $CACHE"; fi
-echo "=== [1/5] real curves, design grid ==="
+echo "[1/5] real curves, design grid"
 $PY smore_strict/ecoli_strict.py $SRC $P --mode real --out $OUT/ecoli_real.json
-echo "=== [2/5] positive control, all five strains (as in v2, with the identifiability diagnostic) ==="
+echo "[2/5] positive control, all five strains (as in v2, with the identifiability diagnostic)"
 $PY smore_strict/ecoli_strict.py --from-npz $CACHE $P --mode synthetic --out $OUT/ecoli_synthetic.json
-echo "=== [3/5] positive control without the 4.63 Mb strain (24 h window) ==="
+echo "[3/5] positive control without the 4.63 Mb strain (24 h window)"
 $PY smore_strict/ecoli_strict.py --from-npz $CACHE $P --mode synthetic --drop-genome 4.63 --out $OUT/ecoli_synthetic_4strains.json
-echo "=== [4/5] real curves, continuous box (for comparison) ==="
+echo "[4/5] real curves, continuous box (for comparison)"
 $PY smore_strict/ecoli_strict.py --from-npz $CACHE $P --mode real --continuous --out $OUT/ecoli_real_continuous.json
-echo "=== [5/5] real curves, design grid, sigma 'quadrature' ==="
+echo "[5/5] real curves, design grid, sigma 'quadrature'"
 $PY smore_strict/ecoli_strict.py --from-npz $CACHE --procs $SLURM_CPUS_PER_TASK $F --sigma-mode quadrature --n-sd 2 --mode real --out $OUT/ecoli_real_quadrature.json
-echo "=== DONE ==="
+echo "DONE"

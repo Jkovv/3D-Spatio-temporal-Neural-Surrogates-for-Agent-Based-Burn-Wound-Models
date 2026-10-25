@@ -6,14 +6,12 @@ training + inference averaged over seeds 1/42/100 (mean +/- SD)
 
 model     cyt    n      T_train (s)     T_infer (s)  speed-up      N*
 ----------------------------------------------------------------------
-DeepONet  il10   3    468.7 +/- 108.1    41.56 +/- 0.26       120x   0.09
-DeepONet  il8    3    574.0 +/- 215.4    42.01 +/- 0.68       119x   0.12
-U-Net     il10   3    122.6 +/- 20.0     1.48 +/- 0.05      3375x   0.02
-U-Net     il8    3     72.2 +/- 11.1     1.62 +/- 0.10      3083x   0.01
+DeepONet  il10   3    529.3 +/- 128.9    40.98 +/- 0.53       122x   0.11
+DeepONet  il8    3    921.7 +/- 283.0    41.38 +/- 0.49       120x   0.19
+U-Net     il10   3    122.1 +/- 16.7     1.45 +/- 0.08      3429x   0.02
+U-Net     il8    3     83.2 +/-  3.5     1.90 +/- 0.24      2619x   0.02
 
 speed-up = T_ABM / T_infer   (compute saved per surrogate query)
 N* = T_train / (T_ABM - T_infer)   (runs to amortise training)
 N* < 1 means the surrogate pays for its own training within one ABM run.
 ==========================================================================
-
-[saved] /gpfs/scratch1/shared/jkowalczuk/surrogates/burns/3D-Spatio-temporal-Neural-Surrogates-for-Agent-Based-Burn-Wound-Models/smores/helpers/speedup_report.txt

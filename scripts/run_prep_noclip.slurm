@@ -17,8 +17,8 @@ SCALE=$BASE/preprocessed_3d_noclip/run_0062/50x50x50/metadata.json
 for i in $(seq 1 100); do
     RUN=$(printf "run_%04d" $i)
     [ -d "$BASE/preprocessed_3d_infer_noclip/$RUN/50x50x50" ] && continue
-    echo "=== $RUN ==="
+    echo "$RUN"
     $PY preprocessing/preprocess_3d.py --sim-root $BASE/sweep/outputs --out-root $BASE/preprocessed_3d_infer_noclip \
         --grid 50 --runs $RUN --scale-from $SCALE || echo "  [FAIL] $RUN"
 done
-echo "=== DONE ==="
+echo "DONE"

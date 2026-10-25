@@ -12,7 +12,7 @@ tf = F._load_field_deps()
 G = F.GRID; h = G // 2
 planes = {"xy": lambda v: v[:, :, h], "xz": lambda v: v[:, h, :], "yz": lambda v: v[h, :, :]}
 
-print("=== reconstruction figure (DeepONet, seed 42, frame index 88) ===")
+print("reconstruction figure (DeepONet, seed 42, frame index 88)")
 for cyt in ["il8", "il10"]:
     gt, pred = F._predict_field(tf, "DeepONet", cyt, 88, seed=42)
     for k, fn in planes.items():
@@ -27,7 +27,7 @@ for cyt in ["il8", "il10"]:
               f"max |err|={e.max():.2e} ({100*e.max()/gm:.1f}% GT max) | "
               f"mean |err|: source core={m(core):.2e} ring={m(ring):.2e} background={m(bg):.2e}")
 
-print("\n=== SSIM on mid-planes (near, windows 80-89, L = c_max) ===")
+print("\nSSIM on mid-planes (near, windows 80-89, L = c_max)")
 for model in F.MODELS:
     for cyt, _ in F.CYTS:
         L = float(F._clip_max(cyt))

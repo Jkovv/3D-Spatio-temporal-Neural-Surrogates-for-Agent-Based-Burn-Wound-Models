@@ -22,7 +22,7 @@ for MODEL in deeponet unet; do
     cp -n $BASE/models/${MODEL}_3d/res_il8_run_0062_50_42.json $BASE/models/${MODEL}_3d/res_il10_run_0062_50_42.json $OUT/
     for CYT in il8 il10; do
         for SEED in 1 100; do
-            echo "=== $MODEL $CYT seed $SEED ==="
+            echo "$MODEL $CYT seed $SEED"
             python $MODEL/train_${MODEL}_3d.py --cytokine $CYT --seed $SEED --run run_0062 --grid 50 \
                 --data $BASE/preprocessed_3d --out $OUT
             cp $OUT/weights_${CYT}_run_0062_50_${SEED}.weights.h5 $BASE/models/${MODEL}_3d/
@@ -31,4 +31,4 @@ for MODEL in deeponet unet; do
 done
 cd $BASE
 python scripts/rollout_3d.py --data $BASE/preprocessed_3d --models $BASE/models --out $BASE/models/rollout_3d --start 80
-echo "=== DONE ==="
+echo "DONE"

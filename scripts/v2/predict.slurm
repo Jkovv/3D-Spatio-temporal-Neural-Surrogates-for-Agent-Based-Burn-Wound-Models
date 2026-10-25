@@ -21,4 +21,4 @@ python run_calibration_surrogate.py --sim-root $WORK/outputs --infer-root $WORK/
     --weights-dir $BASE/models/v2/deeponet_$SCALE --manifest $BASE/smores/manifest.json \
     --model deeponet --run-tag run_0062 --seed $SEED --grid 50 --cytokines il8 \
     --out $BASE/smores/results/v2/calibration_surrogate_il8_${SCALE}_seed${SEED}.json
-echo "=== DONE ==="
+echo "DONE"

@@ -47,7 +47,7 @@ divprf  = int((lifespanf - lifespanf * timeforgrowth) * 2)
 def _scaled(n500, name):
     val = max(1, round(n500 * scale_factor))
     if round(n500 * scale_factor) < 1:
-        print(f"WARNING: {name} count rounded to 0 — flooring to 1")
+        print(f"WARNING: {name} count rounded to 0, flooring to 1")
     return val
 
 init_ec  = _scaled(1000, "init_ec")    # endothelial cells (tissue scaffold)
