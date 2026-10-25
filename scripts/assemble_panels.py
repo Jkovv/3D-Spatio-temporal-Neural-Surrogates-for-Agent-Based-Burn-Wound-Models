@@ -68,6 +68,53 @@ def _imread(path):
     return mpimg.imread(str(path))
 
 
+def assemble_pdf(name, spec, indir, outdir, out_im, labels, dpi):
+    """PDF of the assembled figure. With pdflatex and the panels' own PDFs available, the
+    panels are stacked with LaTeX and stay vector; otherwise the assembled PNG is embedded."""
+    import shutil, subprocess, tempfile
+    from PIL import Image
+
+    stems = spec["sources"]
+    pdfs = [indir / f"{s}.pdf" for s in stems]
+    out_pdf = outdir / f"{name}.pdf"
+    xs = spec.get("label_x")
+    vector = (shutil.which("pdflatex") is not None and all(p.exists() for p in pdfs)
+              and (spec["orient"] == "col" or len(stems) == 1) and not spec.get("panel_x"))
+    if vector:
+        # panel sizes in inches: the PNGs share the PDFs' bounding box
+        sizes = [Image.open(indir / f"{s}.png").size for s in stems]
+        W = max(w for w, _ in sizes) / dpi
+        gap = max(0.08, 0.05 * max(h for _, h in sizes) / dpi)
+        letter = lambda i: "\\textbf{\\Large (" + LETTERS[i] + ")}"
+        lines = []
+        if not labels or (len(stems) == 1 and xs is None):
+            lines.append(f"\\includegraphics{{{pdfs[0].as_posix()}}}")
+        elif xs is not None:
+            marks = "".join(f"\\makebox[0pt][l]{{\\hspace{{{xf * W + 0.06:.3f}in}}{letter(i)}}}" for i, xf in enumerate(xs))
+            lines.append(f"\\makebox[{W:.3f}in][l]{{{marks}}}\\\\[{0.3 * gap:.3f}in]")
+            lines.append(f"\\includegraphics{{{pdfs[0].as_posix()}}}")
+        else:
+            for i, p in enumerate(pdfs):
+                lines.append(f"\\makebox[{W:.3f}in][l]{{\\hspace{{0.06in}}{letter(i)}}}\\\\[{0.3 * gap:.3f}in]")
+                tail = f"\\\\[{0.7 * gap:.3f}in]" if i < len(pdfs) - 1 else ""
+                lines.append(f"\\makebox[{W:.3f}in][c]{{\\includegraphics{{{p.as_posix()}}}}}{tail}")
+        tex = ("\\documentclass[border=2pt,varwidth=\\maxdimen]{standalone}\n\\usepackage{graphicx}\n"
+               "\\begin{document}\\raggedright\n" + "\n".join(lines) + "\n\\end{document}\n")
+        with tempfile.TemporaryDirectory() as td:
+            src = Path(td) / f"{name}.tex"
+            src.write_text(tex)
+            r = subprocess.run(["pdflatex", "-interaction=batchmode", "-halt-on-error",
+                                f"-output-directory={td}", str(src)], capture_output=True, text=True)
+            built = Path(td) / f"{name}.pdf"
+            if r.returncode == 0 and built.exists():
+                shutil.copyfile(built, out_pdf)
+                print(f"  -> {out_pdf}  (vector)")
+                return
+            print(f"  [pdflatex failed for {name}, embedding the PNG instead]")
+    out_im.save(out_pdf, resolution=dpi)
+    print(f"  -> {out_pdf}  (raster)")
+
+
 def assemble(name, spec, indir, outdir, labels=True, dpi=300):
     stems = spec["sources"]
 
@@ -222,6 +269,7 @@ def assemble(name, spec, indir, outdir, labels=True, dpi=300):
     out_png = outdir / f"{name}.png"
     out.save(out_png, dpi=(dpi, dpi))
     print(f"  -> {out_png}  (from {', '.join(stems)})")
+    assemble_pdf(name, spec, indir, outdir, out, labels, dpi)
     return True
 
 
@@ -231,7 +279,7 @@ def main():
     ap.add_argument("--in", dest="indir", default="figures_3d",
                     help="dir with the source F*.png panels")
     ap.add_argument("--out", dest="outdir", default="paper3d/figures",
-                    help="dir for the assembled paper figures (PDF+PNG)")
+                    help="dir for the assembled paper figures (PNG and PDF)")
     ap.add_argument("--only", nargs="*", default=None,
                     help="assemble only these (e.g. fig3_accuracy fig6_recovery)")
     ap.add_argument("--labels", choices=["on", "off"], default="on",

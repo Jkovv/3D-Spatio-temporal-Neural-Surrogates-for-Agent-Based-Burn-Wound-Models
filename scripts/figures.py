@@ -116,6 +116,7 @@ def savef(fig, name):
     FIGDIR.mkdir(parents=True, exist_ok=True)
     p = FIGDIR / f"{name}.png"
     fig.savefig(p)
+    fig.savefig(p.with_suffix(".pdf"))
     plt.close(fig)
     print(f"    -> {p}")
 

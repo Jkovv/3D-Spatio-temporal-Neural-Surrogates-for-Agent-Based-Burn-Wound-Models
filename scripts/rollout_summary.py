@@ -84,7 +84,7 @@ def main():
     axes[0].text(1, Y_FLOOR + 0.04, f"triangles: $R^2 < {Y_FLOOR}$", fontsize=6, color="#555555", va="bottom")
     fig.tight_layout(rect=[0, 0.13, 1, 1])
     Path(a.figdir).mkdir(parents=True, exist_ok=True)
-    out = Path(a.figdir) / "F6_rollout.png"; fig.savefig(out); print(f"wrote {out}")
+    out = Path(a.figdir) / "F6_rollout.png"; fig.savefig(out); fig.savefig(out.with_suffix(".pdf")); print(f"wrote {out} and .pdf")
 
 
 if __name__ == "__main__":
