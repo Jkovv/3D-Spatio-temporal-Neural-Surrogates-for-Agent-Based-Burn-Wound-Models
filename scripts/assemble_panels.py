@@ -252,10 +252,7 @@ def main():
             continue
         if assemble(name, LAYOUTS[name], indir, outdir, labels, args.dpi):
             ok += 1
-    print(f"Done: {ok}/{len(names)} assembled -> {outdir}/")
-    if ok:
-        print("\nDrop into paper.tex, replacing each \\panelplaceholder{...}{...} with:")
-        print("  \\includegraphics[width=\\linewidth]{figures/<name>.png}")
+    print(f"{ok}/{len(names)} assembled -> {outdir}/")
 
 
 if __name__ == "__main__":

@@ -112,8 +112,6 @@ def main():
     print(f"[setup_runs] {args.n_runs} runs x {len(PARAM_ORDER)} params, "
           f"seed={args.seed}, method=lhs_scipy_qmc")
     print(f"[setup_runs] validation: all values within bounds OK")
-    print(f"[setup_runs] next: python run_sweep.py --manifest {args.out} "
-          f"--mode local --cc3d-run <path>")
 
 
 if __name__ == "__main__":
