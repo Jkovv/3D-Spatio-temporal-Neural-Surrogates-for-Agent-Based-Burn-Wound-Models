@@ -72,8 +72,8 @@ ERR_CMAP   = "inferno"
 EBAR_CAPSIZE = 6
 EBAR_KW = dict(ecolor="black", elinewidth=1.6, capthick=1.6)
 
-# ABM reference wall-clock for one 100h trajectory at 50^3 (run_0062 canary).
-ABM_RUNTIME_S = {50: 4984.06}
+# wall-clock of the benchmark ABM run (run_0062, 50^3, 100 h; Slurm elapsed 01:25:21)
+ABM_RUNTIME_S = {50: 5121.0}
 
 # paths relative to the repository root
 MODELS_ROOT = Path("./models")

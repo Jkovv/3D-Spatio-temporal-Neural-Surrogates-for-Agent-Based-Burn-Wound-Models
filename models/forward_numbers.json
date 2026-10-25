@@ -53,7 +53,7 @@
    },
    "train_time_s": 725.5,
    "pred_time_s": 41.181666666666665,
-   "abm_over_inference": 121.02618479096687
+   "abm_over_inference": 124.35145088834028
   },
   "U-Net": {
    "il8": {
@@ -108,7 +108,7 @@
    },
    "train_time_s": 102.69666666666667,
    "pred_time_s": 1.6783333333333335,
-   "abm_over_inference": 2969.648460774578
+   "abm_over_inference": 3051.2413108242304
   }
  },
  "baselines": {

@@ -18,7 +18,7 @@ PLANES = [("xy_midplane_z", "xy"), ("xz_midplane_y", "xz"), ("yz_midplane_x", "y
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--models", default="models"); ap.add_argument("--run", default="run_0062"); ap.add_argument("--grid", type=int, default=50)
-ap.add_argument("--abm-runtime", type=float, default=4984.06, help="wall-clock of one ABM trajectory (s)")
+ap.add_argument("--abm-runtime", type=float, default=5121.0, help="wall-clock of one ABM trajectory (s)")
 a = ap.parse_args()
 M = Path(a.models)
 res = {m: {c: {s: json.load(open(M / d / f"res_{c}_{a.run}_{a.grid}_{s}.json")) for s in SEEDS} for c, _ in CYTS} for m, d in MODELS}

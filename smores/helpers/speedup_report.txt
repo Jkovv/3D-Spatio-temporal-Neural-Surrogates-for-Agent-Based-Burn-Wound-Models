@@ -1,15 +1,15 @@
 ==========================================================================
 SURROGATE SPEED-UP / BREAK-EVEN  (tab:cost_3d)
 ==========================================================================
-T_ABM = 4984 s  (one 50^3 ABM run, rome/CPU)
+T_ABM = 5121 s  (one 50^3 ABM run, rome/CPU)
 training + inference averaged over seeds 1/42/100 (mean +/- SD)
 
 model     cyt    n      T_train (s)     T_infer (s)  speed-up      N*
 ----------------------------------------------------------------------
-DeepONet  il10   3    529.3 +/- 128.9    40.98 +/- 0.53       122x   0.11
-DeepONet  il8    3    921.7 +/- 283.0    41.38 +/- 0.49       120x   0.19
-U-Net     il10   3    122.1 +/- 16.7     1.45 +/- 0.08      3429x   0.02
-U-Net     il8    3     83.2 +/-  3.5     1.90 +/- 0.24      2619x   0.02
+DeepONet  il10   3    529.3 +/- 128.9    40.98 +/- 0.53       125x   0.10
+DeepONet  il8    3    921.7 +/- 283.0    41.38 +/- 0.49       124x   0.18
+U-Net     il10   3    122.1 +/- 16.7     1.45 +/- 0.08      3524x   0.02
+U-Net     il8    3     83.2 +/-  3.5     1.90 +/- 0.24      2691x   0.02
 
 speed-up = T_ABM / T_infer   (compute saved per surrogate query)
 N* = T_train / (T_ABM - T_infer)   (runs to amortise training)
