@@ -32,7 +32,9 @@ python scripts/figures.py --models-root models --prep-root preprocessed_3d --swe
 python scripts/fig_seeddots.py
 python scripts/assemble_panels.py --in figures_3d --out figures
 cp figures_3d/F6_rollout.png figures/fig8_rollout.png
-# field statistics of the sweep for the data appendix
+# field statistics of the sweep for the data appendix (conda python, without the TensorFlow module environment)
+module purge
+unset PYTHONPATH
 PY=/gpfs/scratch1/shared/jkowalczuk/miniconda3/envs/cc3d/bin/python
 $PY smores/helpers/dataset_stats.py $WORK/outputs > smores/helpers/dataset_stats_report.txt
 $PY smores/helpers/sparsity_both.py $WORK/outputs > smores/helpers/sparsity_report.txt
