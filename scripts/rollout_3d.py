@@ -53,6 +53,7 @@ def rollout(kind, model, Xb, Xt, idx, start):
         for k, f in enumerate((i, i + 1)):
             if f in preds: xb[0, k, ..., idx] = preds[f]
         p = predict_one(kind, model, xb, Xt[i:i + 1], idx)
+        p = np.nan_to_num(p, nan=0.0, posinf=1e3, neginf=-1e3)       # a diverged rollout stays finite (scaled axis)
         preds[i + 2] = p; out[i - start] = p
     return out
 

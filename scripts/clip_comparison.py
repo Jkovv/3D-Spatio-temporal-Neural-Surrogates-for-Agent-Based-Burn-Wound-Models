@@ -97,7 +97,7 @@ def main():
                 if not (wdir / f"weights_{cyt}_{a.run}_{a.grid}_{seed}.weights.h5").exists():
                     print(f"  [skip] {lbl} seed {seed}: no weights"); continue
                 model = R.load_model(kind, wdir, cyt, a.run, a.grid, seed)
-                p1 = DON.denormalize(one_step(kind, model, D, idx)[..., None], cmax[scale])
+                p1 = DON.denormalize(np.nan_to_num(one_step(kind, model, D, idx), nan=0.0, posinf=1e3, neginf=-1e3)[..., None], cmax[scale])
                 pr = DON.denormalize(R.rollout(kind, model, D["Xb"], D["Xt"], idx, s0)[..., None], cmax[scale])
                 r = {"one_step_vs_unclipped": scores(truth, p1, M, cref, 0),
                      "one_step_vs_own_target": scores(DON.denormalize(D["Y"][..., idx:idx + 1], cmax[scale]), p1, M, cref, 0),
@@ -122,7 +122,7 @@ def write_table(out, path, mdir=None):
         v = np.array([x for x in vals if np.isfinite(x)])
         if not v.size: return "--"
         f = lambda x: f"{x:.3f}" if x > -10 else "<-10"
-        return f"${f(v.mean())}$" if v.size == 1 else f"${f(v.mean())}$ ({f(v.min())}-{f(v.max())})"
+        return f"${f(v[0])}$" if v.size == 1 else f"${f(float(np.median(v)))}$ [${f(v.min())}$, ${f(v.max())}$]"
     ceil = {}
     if mdir is not None and (Path(mdir) / "clip_ceiling.json").exists():
         ceil = json.load(open(Path(mdir) / "clip_ceiling.json"))
@@ -147,7 +147,7 @@ def write_table(out, path, mdir=None):
                       f"{100*res['test_active_voxels_above_clip']:.1f}\\% of active test voxels above it)}} \\\\\n" + "\n".join(rows))
     body = "\n\\midrule\n".join(blocks)
     path.write_text(f"""\\begin{{table}}[!htbp]
-\\caption{{Clipped vs unclipped normalisation on a second realisation of the benchmark point (run~0062, same parameters). Each network is trained and tuned (same Optuna search space) on its own normalisation, and every row is scored against the same unclipped ground truth: global $R^2$ one step ahead (teacher forcing) and in an autoregressive rollout from $t={out['start_window'] + 2}$\\,h, in the early ($t=82$-91\\,h) and late ($t=92$-100\\,h) windows. Networks: mean over seeds 1, 42 and 100, range in brackets. Clipped field itself: the clipped target scored against the full field, the highest $R^2$ any predictor of the clipped field can reach.}}
+\\caption{{Clipped vs unclipped normalisation on a second realisation of the benchmark point (run~0062, same parameters). Each network is trained and tuned (same Optuna search space) on its own normalisation, and every row is scored against the same unclipped ground truth: global $R^2$ one step ahead (teacher forcing) and in an autoregressive rollout from $t={out['start_window'] + 2}$\\,h, in the early ($t=82$-91\\,h) and late ($t=92$-100\\,h) windows. Networks: median over seeds 1, 42 and 100, range in brackets. Clipped field itself: the clipped target scored against the full field, the highest $R^2$ any predictor of the clipped field can reach.}}
 \\label{{tab:clip_comparison}}
 \\centering\\footnotesize
 \\begin{{tabular}}{{lcccc}}
