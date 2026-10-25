@@ -35,6 +35,7 @@ All ABM results come from one 100-point Latin-hypercube design (`smores/manifest
 │   ├── rollout_3d/                   # autoregressive rollouts
 │   └── persistence_baseline_run_0062_50.json, forward_numbers.json
 ├── scripts/     # preprocessing, training, evaluation, figures; scripts/v2/ is the chain that produced the field results
+├── preprocessed_3d/run_0062/50x50x50/metadata.json   # scales of the benchmark run (clipped); the unclipped scale is models/clip_comparison/metadata_noclip.json
 ├── figures/     # the manuscript figures (PNG)
 ├── figures_3d/  # individual panels the manuscript figures are assembled from
 └── smores/      # sweep, sensitivity analysis and SMoRe ParS (see smores/README.md)
