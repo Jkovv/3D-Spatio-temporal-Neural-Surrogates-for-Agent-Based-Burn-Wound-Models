@@ -60,6 +60,7 @@ LAYOUTS = {
 }
 
 LETTERS = "abcdefgh"
+PDF_FAILED = []
 
 
 def _imread(path):
@@ -68,9 +69,9 @@ def _imread(path):
     return mpimg.imread(str(path))
 
 
-def assemble_pdf(name, spec, indir, outdir, out_im, labels, dpi):
-    """PDF of the assembled figure. With pdflatex and the panels' own PDFs available, the
-    panels are stacked with LaTeX and stay vector; otherwise the assembled PNG is embedded."""
+def assemble_pdf(name, spec, indir, outdir, labels, dpi):
+    """Vector PDF of the assembled figure: the panels' own PDFs placed on one page with pdflatex
+    (graphicx and geometry only). Returns False, with the reason printed, when that is not possible."""
     import shutil, subprocess, tempfile
     from PIL import Image
 
@@ -78,41 +79,64 @@ def assemble_pdf(name, spec, indir, outdir, out_im, labels, dpi):
     pdfs = [indir / f"{s}.pdf" for s in stems]
     out_pdf = outdir / f"{name}.pdf"
     xs = spec.get("label_x")
-    vector = (shutil.which("pdflatex") is not None and all(p.exists() for p in pdfs)
-              and (spec["orient"] == "col" or len(stems) == 1) and not spec.get("panel_x"))
-    if vector:
-        # panel sizes in inches: the PNGs share the PDFs' bounding box
-        sizes = [Image.open(indir / f"{s}.png").size for s in stems]
-        W = max(w for w, _ in sizes) / dpi
-        gap = max(0.08, 0.05 * max(h for _, h in sizes) / dpi)
-        letter = lambda i: "\\textbf{\\Large (" + LETTERS[i] + ")}"
-        lines = []
-        if not labels or (len(stems) == 1 and xs is None):
-            lines.append(f"\\includegraphics{{{pdfs[0].as_posix()}}}")
-        elif xs is not None:
-            marks = "".join(f"\\makebox[0pt][l]{{\\hspace{{{xf * W + 0.06:.3f}in}}{letter(i)}}}" for i, xf in enumerate(xs))
-            lines.append(f"\\makebox[{W:.3f}in][l]{{{marks}}}\\\\[{0.3 * gap:.3f}in]")
-            lines.append(f"\\includegraphics{{{pdfs[0].as_posix()}}}")
-        else:
-            for i, p in enumerate(pdfs):
-                lines.append(f"\\makebox[{W:.3f}in][l]{{\\hspace{{0.06in}}{letter(i)}}}\\\\[{0.3 * gap:.3f}in]")
-                tail = f"\\\\[{0.7 * gap:.3f}in]" if i < len(pdfs) - 1 else ""
-                lines.append(f"\\makebox[{W:.3f}in][c]{{\\includegraphics{{{p.as_posix()}}}}}{tail}")
-        tex = ("\\documentclass[border=2pt,varwidth=\\maxdimen]{standalone}\n\\usepackage{graphicx}\n"
-               "\\begin{document}\\raggedright\n" + "\n".join(lines) + "\n\\end{document}\n")
-        with tempfile.TemporaryDirectory() as td:
-            src = Path(td) / f"{name}.tex"
-            src.write_text(tex)
-            r = subprocess.run(["pdflatex", "-interaction=batchmode", "-halt-on-error",
-                                f"-output-directory={td}", str(src)], capture_output=True, text=True)
-            built = Path(td) / f"{name}.pdf"
-            if r.returncode == 0 and built.exists():
-                shutil.copyfile(built, out_pdf)
-                print(f"  -> {out_pdf}  (vector)")
-                return
-            print(f"  [pdflatex failed for {name}, embedding the PNG instead]")
-    out_im.save(out_pdf, resolution=dpi)
-    print(f"  -> {out_pdf}  (raster)")
+    if shutil.which("pdflatex") is None:
+        print(f"  [{name}: no pdflatex in PATH, no PDF]"); return False
+    missing = [p.name for p in pdfs if not p.exists()]
+    if missing:
+        print(f"  [{name}: missing panel PDFs {', '.join(missing)}, no PDF]"); return False
+    if spec["orient"] != "col" and len(stems) > 1 or spec.get("panel_x"):
+        print(f"  [{name}: layout not supported for PDF]"); return False
+
+    # panel sizes in inches: the PNGs share the PDFs' bounding box
+    sizes = [Image.open(indir / f"{s}.png").size for s in stems]
+    W = max(w for w, _ in sizes) / dpi
+    heights = [h / dpi for _, h in sizes]
+    strip = max(0.08, 0.05 * max(heights))          # letter strip above a panel
+    gap = 0.7 * strip                                # space between panels
+    letter = lambda i: "\\textbf{\\Large (" + LETTERS[i] + ")}"
+    body, H = [], 0.0
+    with_letters = labels and not (len(stems) == 1 and xs is None)
+    if not with_letters:
+        for i, p in enumerate(pdfs):
+            body.append(f"\\makebox[{W:.3f}in][c]{{\\includegraphics{{{p.as_posix()}}}}}\\par")
+            H += heights[i]
+            if i < len(pdfs) - 1:
+                body.append(f"\\vspace{{{gap:.3f}in}}"); H += gap
+    elif xs is not None:
+        marks = "".join(f"\\makebox[0pt][l]{{\\hspace{{{xf * W + 0.06:.3f}in}}{letter(i)}}}" for i, xf in enumerate(xs))
+        body.append(f"\\makebox[{W:.3f}in][l]{{\\rule{{0pt}}{{{strip:.3f}in}}{marks}}}\\par")
+        body.append(f"\\makebox[{W:.3f}in][c]{{\\includegraphics{{{pdfs[0].as_posix()}}}}}\\par")
+        H = strip + heights[0]
+    else:
+        for i, p in enumerate(pdfs):
+            body.append(f"\\makebox[{W:.3f}in][l]{{\\rule{{0pt}}{{{strip:.3f}in}}\\hspace{{0.06in}}{letter(i)}}}\\par")
+            body.append(f"\\makebox[{W:.3f}in][c]{{\\includegraphics{{{p.as_posix()}}}}}\\par")
+            H += strip + heights[i]
+            if i < len(pdfs) - 1:
+                body.append(f"\\vspace{{{gap:.3f}in}}"); H += gap
+    # the panels are stacked in a box, the page is cut to that box and the box is shipped out directly
+    body = [l.replace("\\vspace{", "\\vskip ").replace("in}", "in") if l.startswith("\\vspace") else l for l in body]
+    tex = ("\\documentclass{article}\n\\usepackage{graphicx}\n\\newsavebox{\\figbox}\n"
+           "\\begin{document}\n"
+           f"\\sbox{{\\figbox}}{{\\vbox{{\\hsize={W:.3f}in \\offinterlineskip \\parindent=0pt \\parskip=0pt\n"
+           + "\n".join(body) + "\n}}\n"
+           "\\pdfpagewidth=\\dimexpr\\wd\\figbox+0.06in\\relax\n"
+           "\\pdfpageheight=\\dimexpr\\ht\\figbox+\\dp\\figbox+0.06in\\relax\n"
+           "\\hoffset=\\dimexpr-1in+0.03in\\relax \\voffset=\\dimexpr-1in+0.03in\\relax\n"
+           "\\shipout\\box\\figbox\n\\end{document}\n")
+    with tempfile.TemporaryDirectory() as td:
+        src = Path(td) / f"{name}.tex"
+        src.write_text(tex)
+        r = subprocess.run(["pdflatex", "-interaction=batchmode", "-halt-on-error", f"-output-directory={td}", str(src)],
+                           capture_output=True, text=True)
+        built = Path(td) / f"{name}.pdf"
+        if r.returncode != 0 or not built.exists():
+            log = Path(td) / f"{name}.log"
+            tail = log.read_text(errors="replace").splitlines()[-15:] if log.exists() else [r.stdout[-800:]]
+            print(f"  [{name}: pdflatex failed]\n    " + "\n    ".join(tail)); return False
+        shutil.copyfile(built, out_pdf)
+    print(f"  -> {out_pdf}  (vector)")
+    return True
 
 
 def assemble(name, spec, indir, outdir, labels=True, dpi=300):
@@ -269,7 +293,8 @@ def assemble(name, spec, indir, outdir, labels=True, dpi=300):
     out_png = outdir / f"{name}.png"
     out.save(out_png, dpi=(dpi, dpi))
     print(f"  -> {out_png}  (from {', '.join(stems)})")
-    assemble_pdf(name, spec, indir, outdir, out, labels, dpi)
+    if not assemble_pdf(name, spec, indir, outdir, labels, dpi):
+        PDF_FAILED.append(name)
     return True
 
 
@@ -301,6 +326,8 @@ def main():
         if assemble(name, LAYOUTS[name], indir, outdir, labels, args.dpi):
             ok += 1
     print(f"{ok}/{len(names)} assembled -> {outdir}/")
+    if PDF_FAILED:
+        raise SystemExit(f"no vector PDF for: {', '.join(PDF_FAILED)}")
 
 
 if __name__ == "__main__":

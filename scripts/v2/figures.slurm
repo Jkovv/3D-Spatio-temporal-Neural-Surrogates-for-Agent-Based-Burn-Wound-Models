@@ -34,8 +34,6 @@ python scripts/assemble_panels.py --in figures_3d --out figures
 python scripts/rollout_summary.py
 cp figures_3d/F6_rollout.png figures/fig8_rollout.png
 cp figures_3d/F6_rollout.pdf figures/fig8_rollout.pdf
-# the hand-drawn architecture figure exists only as PNG: embed it in a PDF
-python -c "from PIL import Image; Image.open('figures/fig2_architectures.png').convert('RGB').save('figures/fig2_architectures.pdf', resolution=300)"
 if [ -n "${SKIP_STATS:-}" ]; then echo "DONE (figures only)"; exit 0; fi
 # field statistics of the sweep for the data appendix (conda python, without the TensorFlow module environment)
 module purge
