@@ -31,6 +31,7 @@ python -m py_compile scripts/figures.py scripts/fig_seeddots.py scripts/assemble
 python scripts/figures.py --models-root models --prep-root preprocessed_3d --sweep-root smores --grid 50 --out figures_3d
 python scripts/fig_seeddots.py
 python scripts/assemble_panels.py --in figures_3d --out figures
+python scripts/rollout_summary.py
 cp figures_3d/F6_rollout.png figures/fig8_rollout.png
 cp figures_3d/F6_rollout.pdf figures/fig8_rollout.pdf
 # the hand-drawn architecture figure exists only as PNG: embed it in a PDF
