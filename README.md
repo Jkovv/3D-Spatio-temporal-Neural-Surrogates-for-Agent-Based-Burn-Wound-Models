@@ -64,7 +64,7 @@ All ABM results come from one 100-point Latin-hypercube design (`smores/manifest
 
 ## Reproducing
 
-The cluster drivers contain the Snellius paths of the authors' environment; adjust `BASE`, `WORK` and `PY` at the top of each. Raw cytokine fields are not in the repository (about 20 GB for the 100 runs). The complete material of this study, the 3D ABM (CompuCell3D project), the raw output of the sweep, the cytokine fields of the realisation used for the surrogates, the preprocessed benchmark run on both scales, the trained weights and a snapshot of this repository, is archived on Zenodo: [10.5281/zenodo.20700318](https://doi.org/10.5281/zenodo.20700318)
+The cluster drivers contain the Snellius paths of the authors' environment; adjust `BASE`, `WORK` and `PY` at the top of each. Raw cytokine fields are not in the repository (about 20 GB for the 100 runs). The complete material of this study, the 3D ABM (CompuCell3D project), the raw output of the sweep, the cytokine fields of the realisation used for the surrogates, the preprocessed benchmark run on both scales, the trained weights and a snapshot of this repository, is archived on Zenodo: [10.5281/zenodo.23918475](https://doi.org/10.5281/zenodo.23918475)
 
 ```bash
 # field-based results: ABM runs, preprocessing, training, predictions, loop, evaluation (one dependent chain)
